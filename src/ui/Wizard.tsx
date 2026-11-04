@@ -86,29 +86,15 @@ export function Wizard({
                   autoFocus
                   inputMode="decimal"
                   required
+                  aria-invalid={!!error}
+                  onInput={() => setError("")}
                   value={salary}
                   placeholder="请输入金额"
                   className={salary.length > 9 ? "compact" : ""}
                   onChange={(e) => setSalary(e.target.value)}
                 />
               </span>
-              <small>收入由工作时间实时换算</small>
             </label>
-            {!profile.settings?.salaryCents && !salary.trim() && (
-              <dl
-                className="unconfigured-preview"
-                aria-label="未设置工资的收入预览"
-              >
-                {["今日已赚", "本月累计", "当前时薪", "提成", "满勤奖"].map(
-                  (label) => (
-                    <div key={label}>
-                      <dt>{label}</dt>
-                      <dd>{money(0)}</dd>
-                    </div>
-                  ),
-                )}
-              </dl>
-            )}
             <div className="payday-section">
               <h2>发薪日</h2>
               <div className="card payday-row row between">
@@ -126,7 +112,6 @@ export function Wizard({
                   选择日期
                 </DayOfMonthPicker>
               </div>
-              <p className="wizard-note">工资只在本机计算与保存。</p>
             </div>
           </>
         )}
@@ -134,7 +119,6 @@ export function Wizard({
           <>
             <h1>你什么时候上班？</h1>
             <ScheduleFields draft={draft} change={setDraft} />
-            <p className="wizard-note">点击时间即可滚动选择时、分。</p>
           </>
         )}
         {step === 2 && (

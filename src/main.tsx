@@ -7,6 +7,8 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { at, dayKey } from "./domain/earnings";
 import {
   addCommission,
+  daysToPayday,
+  daysToSaturday,
   empty,
   needsOnboarding,
   profileSnapshot,
@@ -16,6 +18,11 @@ import {
 import type { Profile } from "./domain/profile";
 import { motivation } from "./domain/motivation";
 import { Settings } from "./ui/Settings";
+import {
+  WindowControls,
+  WindowsTitleBar,
+  windowsShell,
+} from "./ui/WindowControls";
 import { LiveAmount } from "./ui/LiveAmount";
 import { Wizard } from "./ui/Wizard";
 import { CommissionForm } from "./ui/CommissionForm";
@@ -30,14 +37,19 @@ const labels = {
   off_work: "已下班",
   rest_day: "休息日",
 };
-const calendarLabel = new Intl.DateTimeFormat("zh-CN", {
-  month: "long",
-  day: "numeric",
-  weekday: "short",
+const weekdayLabel = new Intl.DateTimeFormat("zh-CN", { weekday: "short" });
+const localClock = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
 });
 
 function App() {
   const [p, setP] = useState<Profile | null>(null);
+  useEffect(() => {
+    document.documentElement.dataset.theme = p?.theme ?? "light";
+  }, [p?.theme]);
   const [page, setPage] = useState<"home" | "settings" | "history" | "wizard">(
     "home",
   );
@@ -45,6 +57,7 @@ function App() {
   const [adding, setAdding] = useState(false);
   const [auto, setAuto] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const lock = useRef(false);
   const content = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -55,8 +68,19 @@ function App() {
     void invoke<Profile | null>("load_profile")
       .then(async (saved) => {
         const profile = saved ?? empty();
-        setP(profile);
-        if (profile.pinned) await getCurrentWindow().setAlwaysOnTop(true);
+        const window = getCurrentWindow();
+        try {
+          if (profile.pinned) {
+            await window.setAlwaysOnTop(true);
+            const applied = await window.isAlwaysOnTop();
+            setIsPinned(applied);
+            if (!applied) throw new Error("系统未恢复置顶设置。");
+          }
+        } catch (error) {
+          setError(msg(error));
+        } finally {
+          setP(profile);
+        }
       })
       .catch((e) => setError(msg(e)));
     const refresh = () => setNow(new Date());
@@ -125,9 +149,14 @@ function App() {
   const clock =
     status && q && s
       ? {
-          working: () =>
-            "距离下班还有 " +
-            clockDuration(at(now, s.shiftEnd) - now.getTime()),
+          working: () => (
+            <>
+              距离下班还有{" "}
+              <strong>
+                {clockDuration(at(now, s.shiftEnd) - now.getTime())}
+              </strong>
+            </>
+          ),
           pre_work: () =>
             "距离上班还有 " +
             clockDuration(at(now, s.shiftStart) - now.getTime()),
@@ -153,17 +182,46 @@ function App() {
   const togglePin = () =>
     action(async () => {
       const window = getCurrentWindow();
-      const pinned = !p.pinned;
-      await window.setAlwaysOnTop(pinned);
+      const pinned = !isPinned;
       try {
+        await window.setAlwaysOnTop(pinned);
+        if ((await window.isAlwaysOnTop()) !== pinned)
+          throw new Error("系统未应用置顶设置。");
         await store({ ...p, pinned });
+        setIsPinned(pinned);
       } catch (error) {
-        await window.setAlwaysOnTop(p.pinned);
+        try {
+          await window.setAlwaysOnTop(isPinned);
+        } finally {
+          setIsPinned(await window.isAlwaysOnTop().catch(() => isPinned));
+        }
         throw error;
       }
     });
+  const controls = (
+    <WindowControls
+      pinned={isPinned}
+      dark={p.theme === "dark"}
+      busy={busy}
+      togglePin={togglePin}
+      toggleTheme={() =>
+        action(() =>
+          store({ ...p, theme: p.theme === "dark" ? "light" : "dark" }),
+        )
+      }
+      report={(error) => setError(msg(error))}
+    />
+  );
   return (
     <>
+      {windowsShell && (
+        <WindowsTitleBar report={(error) => setError(msg(error))}>
+          {controls}
+        </WindowsTitleBar>
+      )}
+      {!windowsShell && (!q || page !== "home") && (
+        <div className="mac-window-controls">{controls}</div>
+      )}
       <main ref={content}>
         {error && (
           <p role="alert" className="error">
@@ -300,15 +358,12 @@ function App() {
           <div className="home">
             <div className="status">
               <div className="row between home-top">
-                <small>{calendarLabel.format(now)}</small>
+                <small className="live-date">
+                  {today} {weekdayLabel.format(now)}{" "}
+                  <time>{localClock.format(now)}</time>
+                </small>
                 <div className="row">
-                  <button
-                    aria-pressed={p.pinned}
-                    disabled={busy}
-                    onClick={togglePin}
-                  >
-                    置顶
-                  </button>
+                  {!windowsShell && controls}
                   <button onClick={settings}>设置</button>
                 </div>
               </div>
@@ -322,7 +377,7 @@ function App() {
               <LiveAmount value={q.todayEarned} dailyMaximum={q.dailyBase} />
             </div>
             <p className="hourly">
-              当前时薪 <strong>{money(q.hourlyRate)}/小时</strong>
+              当前赚钱速度 <strong>{money(q.hourlyRate / 3600, 4)}/秒</strong>
             </p>
             <p className="motivation">{motivation(now, s, q, false)}</p>
             <div className="action">
@@ -371,11 +426,12 @@ function App() {
             </div>
             <section className="progress">
               <div className="row between">
-                <span>今日工时</span>
+                <strong>
+                  今日工时进度 <em>{(q.progress * 100).toFixed(1)}%</em>
+                </strong>
                 <span>
-                  {(q.progress * 100).toFixed(1)}% ·{" "}
-                  {q.todayWorkedHours.toFixed(1)} /{" "}
-                  {Number(q.scheduledHours.toFixed(2))} 小时
+                  已工作 {q.todayWorkedHours.toFixed(2)} /{" "}
+                  {q.scheduledHours.toFixed(2)} 小时
                 </span>
               </div>
               <progress aria-label="今日工时" value={q.progress} max={1} />
@@ -386,12 +442,7 @@ function App() {
                 <strong className="monthly">{money(q.monthlyEarned)}</strong>
               </div>
               <div className="month-meta row between">
-                <small>
-                  提成 +{money(q.monthlyCommissionEarned)}
-                  {q.attendanceBonus > 0 && (
-                    <> · 满勤 +{money(q.attendanceBonus)}</>
-                  )}
-                </small>
+                <small>提成 +{money(q.monthlyCommissionEarned)}</small>
                 <button
                   className="text-button"
                   onClick={() => setPage("history")}
@@ -401,18 +452,33 @@ function App() {
               </div>
               <div className="month-actions">
                 <button onClick={() => setAdding(true)}>＋ 添加提成</button>
-                <button
-                  className="attendance"
-                  disabled={busy}
-                  aria-pressed={q.attendanceOn}
-                  onClick={() =>
-                    action(() => store(toggleAttendance(p, new Date())))
-                  }
-                >
-                  {q.attendanceOn ? "已满勤" : "无满勤"}
-                </button>
+                <div className="attendance-group">
+                  <small className="attendance-amount">
+                    满勤奖 {money(q.attendanceAmount)}
+                  </small>
+                  <button
+                    className="attendance"
+                    aria-label={
+                      q.attendanceOn ? "满勤奖：已满勤" : "满勤奖：无满勤"
+                    }
+                    disabled={busy}
+                    aria-pressed={q.attendanceOn}
+                    onClick={() =>
+                      action(() => store(toggleAttendance(p, new Date())))
+                    }
+                  >
+                    <span aria-hidden="true">{q.attendanceOn ? "●" : "○"}</span>{" "}
+                    {q.attendanceOn ? "已满勤" : "无满勤"}
+                  </button>
+                </div>
               </div>
             </section>
+            <footer className="home-dates">
+              <span>距离周末还有 {daysToSaturday(now)} 天</span>
+              <span>
+                距离发薪日还有 {daysToPayday(p.settings!.payday, now)} 天
+              </span>
+            </footer>
           </div>
         ) : null}
       </main>

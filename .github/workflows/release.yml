@@ -77,6 +77,26 @@ jobs:
           if ($files.Count -ne 1) { throw "Expected one installer in $path, got $($files.Count)" }
           New-Item -ItemType Directory -Force release-assets | Out-Null
           Copy-Item -LiteralPath $files[0].FullName -Destination "release-assets/ShangBan-v$version-$env:PLATFORM$env:SUFFIX"
+      - name: Verify Windows installer and upgrade path
+        if: matrix.name == 'windows-x64'
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem release-assets/*-setup.exe).FullName
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          Write-Host "Authenticode status: $($signature.Status)"
+          $installDir = Join-Path $env:RUNNER_TEMP "ShangBan-Smoke"
+          $app = Join-Path $installDir "shang-ban-gu-li-qi.exe"
+          $uninstaller = Join-Path $installDir "uninstall.exe"
+          foreach ($attempt in 1..2) {
+            $p = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+            if ($p.ExitCode -ne 0 -or !(Test-Path -LiteralPath $app) -or !(Test-Path -LiteralPath $uninstaller)) {
+              throw "Install or reinstall attempt $attempt failed with exit code $($p.ExitCode)"
+            }
+          }
+          $p = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0 -or (Test-Path -LiteralPath $app)) {
+            throw "Uninstall failed with exit code $($p.ExitCode)"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.name }}
@@ -111,6 +131,6 @@ jobs:
             gh release upload "$TAG" "${assets[@]}" SHA256SUMS.txt --clobber
           else
             gh release create "$TAG" --verify-tag --draft --title "上班鼓励器 $TAG" \
-              --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包无发布者签名。公开前须完成双端实机验收。" \
+              --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包是未签名测试版，SmartScreen 可能提示未知发布者。下载后可核对 SHA-256；公开前须完成双端实机验收。" \
               "${assets[@]}" SHA256SUMS.txt
           fi

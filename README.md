@@ -1,6 +1,6 @@
 # 上班鼓励器
 
-一个本地桌面应用。按税后月薪、固定工作日和排班计算今日收入、本月累计与时薪。支持暂停、午休、提成、按月满勤奖金、托盘驻留和窗口置顶。首次启动的工资为空，保存有效工资后才开始计算。
+一个本地桌面应用。按税后月薪、固定工作日和排班计算今日收入、本月累计与赚钱速度。支持暂停、午休、提成、按月满勤奖金、托盘驻留和窗口置顶。首次启动的工资为空，保存有效工资后才开始计算。
 
 ![主界面，使用隔离的验收数据](docs/screenshots/main.png)
 
@@ -14,7 +14,7 @@
 | macOS Apple Silicon | `macos-arm64.dmg` |
 | macOS Intel | `macos-x64.dmg` |
 
-Windows 安装包未使用发布者证书签名，可能出现 SmartScreen 提示。macOS 使用临时签名，未做 Apple 公证，Gatekeeper 可能提示无法验证开发者。请核对来源和 Release 提供的 SHA-256。
+没有 Authenticode 发布者签名的 Windows 安装包属于未签名测试版，可能出现 SmartScreen 提示。SHA-256 用于核对文件是否一致，不能证明软件安全。macOS 使用临时签名，未做 Apple 公证，Gatekeeper 可能提示无法验证开发者。请核对来源和 Release 提供的 SHA-256。
 
 ## 从源码构建
 

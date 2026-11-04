@@ -1,0 +1,19 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "上班鼓励器",
+        "width": 448,
+        "height": 620,
+        "minWidth": 400,
+        "minHeight": 550,
+        "maxWidth": 560,
+        "maxHeight": 850,
+        "center": true,
+        "decorations": false,
+        "shadow": true
+      }
+    ]
+  }
+}

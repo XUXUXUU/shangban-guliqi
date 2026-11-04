@@ -2,8 +2,8 @@
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", sans-serif;
-  color: #292d31;
-  background: #fff7ea;
+  color: var(--ink);
+  background: var(--canvas);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   color-scheme: light;
@@ -12,12 +12,67 @@
   --coral: #d65a52;
   --line: #e8e0d3;
   --paper: #fffdf8;
+  --ink: #292d31;
+  --canvas: #fff7ea;
+  --button: #f2e8da;
+  --selected: #f6d9d1;
+  --selected-ink: #92372f;
+  --error: #982b25;
+  --warm-text: #86562f;
+  --body-text: #514238;
+  --track: #ecdfcf;
+  --month-light: #fffdf6;
+  --month-warm: #fbefe2;
+  --commission: #f6ded2;
+  --neutral-pill: #eae6df;
+  --neutral-ink: #655d54;
+  --attendance-on: #b8483e;
+  --warm-paper: #fff9ef;
+  --focus: #b7443e;
+  --placeholder: #a56058;
+  --soft-accent: #fff0eb;
+  --accent-line: #f2c9bd;
+  --wheel-ink: #74665a;
+  --primary-bg: #292d31;
+  --primary-hover: #423e40;
   --shadow: 0 10px 28px #5d422e12;
   --radius: 18px;
   --s1: 6px;
   --s2: 10px;
   --s3: 16px;
   --s4: 24px;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f5ebe3;
+  --canvas: #252120;
+  --paper: #302a28;
+  --muted: #c9b9ad;
+  --accent: #ffa99c;
+  --coral: #ed8477;
+  --line: #554740;
+  --button: #3d3430;
+  --selected: #583832;
+  --selected-ink: #ffb6a8;
+  --error: #ffad9f;
+  --warm-text: #f4bb92;
+  --body-text: #e4d5c9;
+  --track: #55453d;
+  --month-light: #332a27;
+  --month-warm: #3e302a;
+  --commission: #543630;
+  --neutral-pill: #4c4542;
+  --neutral-ink: #e2d7d1;
+  --attendance-on: #a64035;
+  --warm-paper: #352c29;
+  --focus: #ffa99c;
+  --placeholder: #d5968c;
+  --soft-accent: #50332e;
+  --accent-line: #795049;
+  --wheel-ink: #c9b9ad;
+  --primary-bg: #49413d;
+  --primary-hover: #5b4d46;
+  --shadow: 0 10px 28px #0003;
 }
 * {
   box-sizing: border-box;
@@ -65,23 +120,25 @@ select {
   color: inherit;
 }
 button {
+  appearance: none;
+  line-height: 1.25;
   border: 0;
-  background: #f2e8da;
+  background: var(--button);
   border-radius: 9px;
   padding: 7px 11px;
   min-height: 32px;
   cursor: pointer;
 }
 button:hover {
-  background: #e8e0d3;
+  background: var(--line);
 }
 button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 button[aria-pressed="true"] {
-  background: #f6d9d1;
-  color: #92372f;
+  background: var(--selected);
+  color: var(--selected-ink);
 }
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -90,12 +147,12 @@ button[aria-pressed="true"] {
 .primary {
   width: 100%;
   min-height: 46px;
-  background: #292d31;
+  background: var(--primary-bg);
   color: white;
   font-weight: 650;
 }
 .primary:hover {
-  background: #423e40;
+  background: var(--primary-hover);
 }
 .row {
   display: flex;
@@ -118,7 +175,7 @@ button[aria-pressed="true"] {
   min-width: 0;
 }
 .error {
-  color: #982b25;
+  color: var(--error);
   font-size: 12px;
 }
 label {
@@ -129,14 +186,16 @@ label {
 }
 input:not([type="checkbox"]),
 select {
+  appearance: none;
+  line-height: 1.25;
   min-width: 0;
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fffdf8;
+  background: var(--paper);
   padding: 8px 10px;
   min-height: 38px;
-  color: #292d31;
+  color: var(--ink);
   font-size: 15px;
 }
 input[type="checkbox"] {
@@ -172,7 +231,7 @@ input[type="checkbox"] {
 }
 .paused,
 .lunch {
-  color: #86562f;
+  color: var(--warm-text);
 }
 .earn {
   padding-top: 3px;
@@ -213,7 +272,7 @@ input[type="checkbox"] {
 }
 .motivation {
   line-height: 1.45;
-  color: #514238;
+  color: var(--body-text);
   overflow-wrap: anywhere;
 }
 .action:empty {
@@ -232,10 +291,10 @@ progress {
   border-radius: 8px;
   overflow: hidden;
   margin-top: 8px;
-  background: #ecdfcf;
+  background: var(--track);
 }
 progress::-webkit-progress-bar {
-  background: #ecdfcf;
+  background: var(--track);
 }
 progress::-webkit-progress-value {
   background: var(--coral);
@@ -244,7 +303,7 @@ progress::-webkit-progress-value {
 }
 .month {
   padding: 15px;
-  background: linear-gradient(150deg, #fffdf6, #fbefe2);
+  background: linear-gradient(150deg, var(--month-light), var(--month-warm));
   box-shadow: 0 3px 10px #56341509;
 }
 .month-total {
@@ -282,16 +341,16 @@ progress::-webkit-progress-value {
   padding-top: 10px;
 }
 .month-actions > button:first-child {
-  background: #f6ded2;
-  color: #8b392f;
+  background: var(--commission);
+  color: var(--selected-ink);
 }
 .attendance {
-  background: #eae6df;
-  color: #655d54;
+  background: var(--neutral-pill);
+  color: var(--neutral-ink);
   min-width: 78px;
 }
 .attendance[aria-pressed="true"] {
-  background: #b8483e;
+  background: var(--attendance-on);
   color: #fff;
 }
 .wizard,
@@ -326,7 +385,7 @@ progress::-webkit-progress-value {
   min-height: 32px;
 }
 .derived {
-  background: #f8eee0;
+  background: var(--button);
   border-radius: 9px;
   padding: 8px 10px;
   color: var(--muted);
@@ -430,7 +489,7 @@ dialog::backdrop {
   position: sticky;
   bottom: 0;
   z-index: 1;
-  box-shadow: 0 0 0 5px #fff7ea;
+  box-shadow: 0 0 0 5px var(--canvas);
 }
 
 .finance-fields {
@@ -453,7 +512,7 @@ dialog::backdrop {
 .wizard-progress i {
   height: 4px;
   border-radius: 8px;
-  background: #eaddcd;
+  background: var(--track);
   flex: 1;
 }
 .wizard-progress i.active {
@@ -489,42 +548,38 @@ dialog::backdrop {
   color: var(--muted);
 }
 .hero-money {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: linear-gradient(155deg, var(--paper), #fff9ef);
+  background: linear-gradient(155deg, var(--paper), var(--warm-paper));
   padding: 17px 19px;
   box-shadow: var(--shadow);
 }
-.hero-money::after {
-  content: "¥";
-  position: absolute;
-  z-index: -1;
-  right: -6px;
-  top: 0;
-  font-size: 128px;
-  line-height: 1;
-  font-weight: 800;
-  color: #f3ded0;
-  opacity: 0.43;
-  pointer-events: none;
-}
 .hero-money:focus-within {
-  border-color: #e4a194;
+  border-color: var(--focus);
+  box-shadow:
+    inset 0 0 0 1px var(--focus),
+    var(--shadow);
+}
+.hero-money:has(input[aria-invalid="true"]) {
+  border-color: var(--error);
 }
 .money-edit {
   display: flex;
   align-items: baseline;
+  min-width: 0;
   color: var(--accent);
-  gap: 4px;
+  gap: 8px;
   font-size: 35px;
   font-weight: 700;
 }
 .money-edit input:not([type="checkbox"]) {
+  flex: 1;
+  min-width: 0;
   padding: 0;
   border: 0;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
   background: transparent;
   color: inherit;
   font-size: 46px;
@@ -535,7 +590,7 @@ dialog::backdrop {
   font-size: 32px;
 }
 .money-edit input::placeholder {
-  color: #bd766e;
+  color: var(--placeholder);
 }
 .payday-section {
   margin-top: 20px;
@@ -558,14 +613,9 @@ dialog::backdrop {
 }
 .day-trigger {
   color: var(--accent);
-  background: #fff0eb;
+  background: var(--soft-accent);
   font-weight: 650;
   white-space: nowrap;
-}
-.wizard-note {
-  margin: 10px 2px 0;
-  color: var(--muted);
-  font-size: 11px;
 }
 .schedule {
   gap: var(--s2);
@@ -583,8 +633,8 @@ dialog::backdrop {
   background: var(--paper);
 }
 .week button[aria-pressed="true"] {
-  background: #fbe0d8;
-  border-color: #f5d3c8;
+  background: var(--selected);
+  border-color: var(--accent-line);
 }
 .schedule-times {
   margin-top: 5px;
@@ -637,7 +687,7 @@ dialog::backdrop {
   height: 82px;
   border-radius: 24px;
   background: var(--paper);
-  border: 2px solid #f9e4d9;
+  border: 2px solid var(--accent-line);
   box-shadow: 0 10px 20px #ad605624;
 }
 .ready-icon::before {
@@ -647,7 +697,7 @@ dialog::backdrop {
   transform: rotate(-11deg);
   z-index: -1;
   border-radius: 25px;
-  background: #ffede4;
+  background: var(--soft-accent);
 }
 .ready-icon img {
   width: 65px;
@@ -662,7 +712,7 @@ dialog::backdrop {
   width: 27px;
   height: 27px;
   border-radius: 50%;
-  border: 3px solid #fff7ea;
+  border: 3px solid var(--canvas);
   color: white;
   background: var(--coral);
 }
@@ -679,7 +729,7 @@ dialog::backdrop {
 .summary-card {
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: linear-gradient(165deg, var(--paper), #fff7ed);
+  background: linear-gradient(165deg, var(--paper), var(--warm-paper));
   box-shadow: var(--shadow);
 }
 .summary-pay {
@@ -761,8 +811,8 @@ dialog::backdrop {
   inset: 84px 0 auto;
   height: 42px;
   border-radius: 11px;
-  border: 1px solid #f2c9bd;
-  background: #ffe9e0;
+  border: 1px solid var(--accent-line);
+  background: var(--selected);
   pointer-events: none;
 }
 .wheel {
@@ -782,7 +832,7 @@ dialog::backdrop {
   scroll-snap-align: center;
   padding: 0;
   background: transparent;
-  color: #867568;
+  color: var(--wheel-ink);
   font-size: 17px;
 }
 .wheel button:hover {
@@ -840,16 +890,124 @@ dialog::backdrop {
   font-size: 26px;
   letter-spacing: normal;
 }
-.unconfigured-preview {
+
+.windows-titlebar {
+  flex: 0 0 40px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 7px 12px;
-  margin-top: 10px;
+  justify-content: space-between;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  user-select: none;
 }
-.unconfigured-preview dt {
-  font-size: 10px;
-}
-.unconfigured-preview dd {
+.window-drag {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding-inline: 12px;
+  gap: 7px;
   font-size: 12px;
   font-weight: 650;
+}
+.window-drag img {
+  width: 19px;
+  height: 19px;
+  pointer-events: none;
+}
+.window-drag span {
+  white-space: nowrap;
+  pointer-events: none;
+}
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline: 4px;
+}
+.window-controls .window-control {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+  width: 32px;
+  min-height: 30px;
+  padding: 0;
+}
+.window-controls .window-control:hover {
+  background: var(--button);
+  color: var(--ink);
+}
+.window-controls .window-control[aria-pressed="true"] {
+  color: var(--selected-ink);
+  background: var(--selected);
+}
+.windows-titlebar .window-control:last-child:hover {
+  color: white;
+  background: var(--attendance-on);
+}
+.mac-window-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 3px 10px 0;
+}
+.live-date {
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.live-date time {
+  margin-left: 0.55em;
+}
+.progress strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+.progress em {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--accent);
+}
+.attendance {
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.attendance:hover {
+  box-shadow: inset 0 0 0 1px currentColor;
+  background: var(--neutral-pill);
+}
+.attendance-amount {
+  white-space: nowrap;
+}
+.attendance-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.home-dates {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-height: 560px) {
+  main {
+    padding-block: 12px;
+  }
+  .home {
+    gap: 9px;
+  }
+  .home-top {
+    padding-bottom: 3px;
+  }
+  .home .primary {
+    min-height: 40px;
+  }
+  .home .month {
+    padding: 12px;
+  }
 }

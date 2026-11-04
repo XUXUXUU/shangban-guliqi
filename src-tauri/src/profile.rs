@@ -15,7 +15,17 @@ pub struct Profile {
     commissions: Vec<Commission>,
     pinned: bool,
     #[serde(default)]
+    theme: Theme,
+    #[serde(default)]
     attendance_months: BTreeMap<String, bool>,
+}
+
+#[derive(Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum Theme {
+    #[default]
+    Light,
+    Dark,
 }
 
 #[derive(Deserialize, Serialize)]

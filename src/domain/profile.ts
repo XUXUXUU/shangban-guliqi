@@ -26,6 +26,7 @@ export type Profile = {
   pauses: Pause[];
   commissions: Entry[];
   pinned: boolean;
+  theme?: "light" | "dark";
   attendanceMonths?: Record<string, boolean>;
 };
 export const empty = (): Profile => ({
@@ -103,7 +104,7 @@ export function toggleAttendance(p: Profile, now: Date): Profile {
     ...p,
     attendanceMonths: {
       ...p.attendanceMonths,
-      [month]: !p.attendanceMonths?.[month],
+      [month]: !(p.attendanceMonths?.[month] ?? true),
     },
   };
 }
@@ -119,13 +120,13 @@ export function profileSnapshot(p: Profile, now: Date) {
       amountCny: c.amountCents / 100,
     })),
   );
-  const attendanceOn = p.attendanceMonths?.[monthKey(now)] === true;
-  const attendanceBonus = attendanceOn
-    ? (p.settings.attendanceCents ?? 0) / 100
-    : 0;
+  const attendanceOn = p.attendanceMonths?.[monthKey(now)] ?? true;
+  const attendanceAmount = (p.settings.attendanceCents ?? 0) / 100;
+  const attendanceBonus = attendanceOn ? attendanceAmount : 0;
   return {
     ...q,
     attendanceOn,
+    attendanceAmount,
     attendanceBonus,
     monthlyEarned: q.monthlyEarned + attendanceBonus,
   };
@@ -145,4 +146,19 @@ export function needsOnboarding(p: Profile): boolean {
     p.settings.salaryCents <= 0 ||
     p.onboardingCompleted === false
   );
+}
+
+export function daysToPayday(day: number, now: Date): number {
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const today = now.getDate();
+  const due = paydayInMonth(day, now);
+  if (due >= today) return due - today;
+  const next = new Date(year, month + 1, 1);
+  const endOfMonth = new Date(year, month + 1, 0).getDate();
+  return endOfMonth - today + paydayInMonth(day, next);
+}
+
+export function daysToSaturday(now: Date): number {
+  return (6 - now.getDay() + 7) % 7;
 }
