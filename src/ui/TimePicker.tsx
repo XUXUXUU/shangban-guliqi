@@ -1,3 +1,4 @@
+import { Chevron } from "./Chevron";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -163,7 +164,7 @@ export function TimePicker({
         <small>{label}</small>
         <strong>
           {value}
-          <span aria-hidden="true">⌄</span>
+          <Chevron />
         </strong>
       </button>
       {draft && (
@@ -218,7 +219,7 @@ export function DayOfMonthPicker({
         aria-label={`每个月 ${value} 日`}
         onClick={() => setDraft(value)}
       >
-        {children ?? `${value} 日`} <span aria-hidden="true">⌄</span>
+        {children ?? `${value} 日`} <Chevron />
       </button>
       {draft !== null && (
         <PickerDialog

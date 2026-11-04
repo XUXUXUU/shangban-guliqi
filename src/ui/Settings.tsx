@@ -8,6 +8,7 @@ import {
 import type { Profile, Rules } from "../domain/profile";
 import { DayOfMonthPicker } from "./TimePicker";
 import { ScheduleFields } from "./ScheduleFields";
+import { Chevron } from "./Chevron";
 import { money, msg } from "./format";
 
 export function Settings({
@@ -16,6 +17,7 @@ export function Settings({
   save,
   close,
   reviewOnboarding,
+  manageGoals,
   busy,
   now,
 }: {
@@ -24,6 +26,7 @@ export function Settings({
   save: (rules: Rules) => Promise<void>;
   close: () => void;
   reviewOnboarding: () => void;
+  manageGoals: () => void;
   busy: boolean;
   now: Date;
 }) {
@@ -72,6 +75,17 @@ export function Settings({
         onClick={reviewOnboarding}
       >
         重新查看新手引导
+      </button>
+      <button
+        className="card goal-link row between"
+        type="button"
+        onClick={manageGoals}
+        disabled={busy}
+      >
+        <strong>激励目标</strong>
+        <span className="goal-link-action">
+          管理 <Chevron right />
+        </span>
       </button>
       <ScheduleFields draft={draft} change={setDraft} />
       <section className="card settings-finance">

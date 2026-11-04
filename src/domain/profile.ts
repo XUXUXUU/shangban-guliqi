@@ -6,6 +6,7 @@ import {
   validateSettings,
 } from "./earnings.ts";
 import type { Settings, Overrides, Pause } from "./earnings.ts";
+import type { Goal } from "./motivation.ts";
 
 export type Rules = Omit<Settings, "salaryCny"> & {
   salaryCents: number;
@@ -28,6 +29,7 @@ export type Profile = {
   pinned: boolean;
   theme?: "light" | "dark";
   attendanceMonths?: Record<string, boolean>;
+  customGoals?: Goal[];
 };
 export const empty = (): Profile => ({
   settings: null,

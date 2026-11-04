@@ -260,6 +260,25 @@ mod tests {
         let migrated = serde_json::to_value(profile).unwrap();
         assert_eq!(migrated["onboardingCompleted"], true);
         let original: serde_json::Value = serde_json::from_str(&saved).unwrap();
+        assert_eq!(migrated["customGoals"], serde_json::json!([]));
+        let mut with_goal = migrated.clone();
+        with_goal["customGoals"] = serde_json::json!([
+            {"id":"custom:carwash","name":"一次洗车","priceCents":8001}
+        ]);
+        let parsed: Profile = serde_json::from_value(with_goal.clone()).unwrap();
+        parsed.validate().unwrap();
+        let payload = serde_json::to_string(&parsed).unwrap();
+        db.execute("UPDATE profile SET payload=?1 WHERE id=1", [payload])
+            .unwrap();
+        let saved: String = db
+            .query_row("SELECT payload FROM profile", [], |r| r.get(0))
+            .unwrap();
+        let roundtrip: serde_json::Value = serde_json::from_str(&saved).unwrap();
+        assert_eq!(roundtrip, with_goal);
+        with_goal["customGoals"][0]["priceCents"] = 0.into();
+        let invalid: Profile = serde_json::from_value(with_goal).unwrap();
+        assert!(invalid.validate().is_err());
+
         for field in ["settings", "pauses", "commissions", "overrides", "pinned"] {
             // The codec may add a default attendance amount and omit an empty note.
             if field == "settings" {

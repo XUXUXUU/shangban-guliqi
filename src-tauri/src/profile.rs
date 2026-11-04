@@ -18,6 +18,16 @@ pub struct Profile {
     theme: Theme,
     #[serde(default)]
     attendance_months: BTreeMap<String, bool>,
+    #[serde(default)]
+    custom_goals: Vec<Goal>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Goal {
+    id: String,
+    name: String,
+    price_cents: u64,
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -166,6 +176,19 @@ impl Profile {
                 || entry.note.encode_utf16().count() > 100
             {
                 return Err("提成记录无效");
+            }
+        }
+        let mut goal_ids = HashSet::new();
+        for goal in &self.custom_goals {
+            if !goal.id.starts_with("custom:")
+                || goal.id.len() <= "custom:".len()
+                || !goal_ids.insert(&goal.id)
+                || goal.name != goal.name.trim()
+                || !(2..=24).contains(&goal.name.chars().count())
+                || goal.name.chars().any(|c| c <= '\u{1f}' || c == '\u{7f}')
+                || !(1..=99_999_999).contains(&goal.price_cents)
+            {
+                return Err("自定义激励目标无效");
             }
         }
         Ok(())

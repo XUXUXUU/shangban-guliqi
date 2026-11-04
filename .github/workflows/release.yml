@@ -83,20 +83,55 @@ jobs:
         run: |
           $installer = (Get-ChildItem release-assets/*-setup.exe).FullName
           $signature = Get-AuthenticodeSignature -LiteralPath $installer
-          Write-Host "Authenticode status: $($signature.Status)"
+          $signer = $signature.SignerCertificate
+          $os = Get-CimInstance Win32_OperatingSystem
+          $details = [ordered]@{
+            file = Split-Path $installer -Leaf
+            sha256 = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLower()
+            commit = $env:GITHUB_SHA
+            windows = "$($os.Caption) $($os.Version) (build $($os.BuildNumber))"
+            status = $signature.Status.ToString()
+            signerCertificate = if ($signer) { $signer.Subject } else { $null }
+            signerThumbprint = if ($signer) { $signer.Thumbprint } else { $null }
+            timestampCertificate = if ($signature.TimeStamperCertificate) { $signature.TimeStamperCertificate.Subject } else { $null }
+            malwareScan = 'Not run'
+            smartScreen = 'Not exercised by silent install'
+          }
+          $details | ConvertTo-Json | Tee-Object -FilePath release-assets/windows-verification.json
           $installDir = Join-Path $env:RUNNER_TEMP "ShangBan-Smoke"
           $app = Join-Path $installDir "shang-ban-gu-li-qi.exe"
           $uninstaller = Join-Path $installDir "uninstall.exe"
+          $bundle = Join-Path $env:LOCALAPPDATA "com.shangbanguliqi.desktop"
+          if (Test-Path -LiteralPath $bundle) { throw "Expected clean test data directory on runner" }
+          New-Item -ItemType Directory -Path $bundle | Out-Null
+          $fixture = Join-Path $bundle "installer-ci-fixture.txt"
+          Set-Content -LiteralPath $fixture -Value "synthetic test fixture"
           foreach ($attempt in 1..2) {
             $p = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
-            if ($p.ExitCode -ne 0 -or !(Test-Path -LiteralPath $app) -or !(Test-Path -LiteralPath $uninstaller)) {
+            if ($p.ExitCode -ne 0 -or !(Test-Path -LiteralPath $app) -or !(Test-Path -LiteralPath $uninstaller) -or !(Test-Path -LiteralPath $fixture)) {
               throw "Install or reinstall attempt $attempt failed with exit code $($p.ExitCode)"
             }
           }
           $p = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
-          if ($p.ExitCode -ne 0 -or (Test-Path -LiteralPath $app)) {
-            throw "Uninstall failed with exit code $($p.ExitCode)"
+          if ($p.ExitCode -ne 0 -or (Test-Path -LiteralPath $app) -or !(Test-Path -LiteralPath $fixture)) {
+            throw "Uninstall failed or modified test data (exit code $($p.ExitCode))"
           }
+          # Prepare a disposable installed copy for the interactive evidence step.
+          $p = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "UI fixture installation failed" }
+      - name: Capture Windows NSIS UI evidence
+        if: matrix.name == 'windows-x64'
+        continue-on-error: true
+        shell: powershell
+        run: |
+          $installer = (Get-ChildItem release-assets/*-setup.exe).FullName
+          ./.github/scripts/windows-installer-ui.ps1 -Installer $installer -InstallDir "$env:RUNNER_TEMP/ShangBan-Smoke" -EvidenceDir "windows-ui"
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.name == 'windows-x64'
+        with:
+          name: windows-native-ui-evidence
+          path: windows-ui/*
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.name }}
@@ -128,9 +163,9 @@ jobs:
           sha256sum "${assets[@]}" > SHA256SUMS.txt
           if gh release view "$TAG" --json isDraft --jq .isDraft > ../draft-status; then
             test "$(cat ../draft-status)" = true
-            gh release upload "$TAG" "${assets[@]}" SHA256SUMS.txt --clobber
+            gh release upload "$TAG" "${assets[@]}" SHA256SUMS.txt windows-verification.json --clobber
           else
             gh release create "$TAG" --verify-tag --draft --title "上班鼓励器 $TAG" \
               --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包是未签名测试版，SmartScreen 可能提示未知发布者。下载后可核对 SHA-256；公开前须完成双端实机验收。" \
-              "${assets[@]}" SHA256SUMS.txt
+              "${assets[@]}" SHA256SUMS.txt windows-verification.json
           fi
