@@ -113,3 +113,4 @@ jobs:
             gh release create "$TAG" --verify-tag --draft --title "上班鼓励器 $TAG" \
               --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包无发布者签名。公开前须完成双端实机验收。" \
               "${assets[@]}" SHA256SUMS.txt
+          fi
