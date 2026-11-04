@@ -1,0 +1,115 @@
+name: Build desktop installers
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: nsis
+            suffix: -setup.exe
+            name: windows-x64
+            native_test: true
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+            bundle: dmg
+            suffix: .dmg
+            name: macos-arm64
+            native_test: true
+          - runner: macos-latest
+            target: x86_64-apple-darwin
+            bundle: dmg
+            suffix: .dmg
+            name: macos-x64
+            native_test: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm test
+      - run: node --test reference/earnings.test.mjs
+      - run: npm run build
+      - if: matrix.native_test
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}
+      - name: Build installer
+        uses: tauri-apps/tauri-action@v1
+        with:
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }} -- --locked
+      - name: Stage release asset
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
+          BUNDLE: ${{ matrix.bundle }}
+          SUFFIX: ${{ matrix.suffix }}
+          PLATFORM: ${{ matrix.name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag must match package.json version v$version"
+          }
+          $path = "src-tauri/target/$env:TARGET/release/bundle/$env:BUNDLE"
+          $files = @(Get-ChildItem $path -File | Where-Object { $_.Name.EndsWith($env:SUFFIX) })
+          if ($files.Count -ne 1) { throw "Expected one installer in $path, got $($files.Count)" }
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          Copy-Item -LiteralPath $files[0].FullName -Destination "release-assets/ShangBan-v$version-$env:PLATFORM$env:SUFFIX"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.name }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  draft:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: release-assets
+      - name: Create draft after all builds succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd release-assets
+          assets=("ShangBan-$TAG-windows-x64-setup.exe" "ShangBan-$TAG-macos-arm64.dmg" "ShangBan-$TAG-macos-x64.dmg")
+          for asset in "${assets[@]}"; do test -s "$asset"; done
+          sha256sum "${assets[@]}" > SHA256SUMS.txt
+          if gh release view "$TAG" --json isDraft --jq .isDraft > ../draft-status; then
+            test "$(cat ../draft-status)" = true
+            gh release upload "$TAG" "${assets[@]}" SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" --verify-tag --draft --title "上班鼓励器 $TAG" \
+              --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包无发布者签名。公开前须完成双端实机验收。" \
+              "${assets[@]}" SHA256SUMS.txt

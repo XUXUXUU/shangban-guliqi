@@ -1,0 +1,348 @@
+{
+  "currency": "CNY",
+  "priceDisclaimer": "本产品内置的目标价格仅作激励示例，不代表当前物价。",
+  "selection": {
+    "workingRefreshMinutes": 20,
+    "avoidLastTargetCount": 1,
+    "avoidLastTemplateCount": 3,
+    "todayReachableOnly": true,
+    "fallbackWhenNoGoal": "completed or off-work sentence",
+    "note": "跨午休倒计时需按排班时间而非连续秒数推算；目标价格不支持用户自定义。"
+  },
+  "targets": [
+    {
+      "id": "breakfast",
+      "name": "一份早餐",
+      "priceCny": 18,
+      "category": "food"
+    },
+    {
+      "id": "americano",
+      "name": "一杯美式",
+      "priceCny": 23,
+      "category": "drink"
+    },
+    {
+      "id": "milk_tea",
+      "name": "一杯奶茶",
+      "priceCny": 25,
+      "category": "drink"
+    },
+    {
+      "id": "takeout",
+      "name": "一顿外卖",
+      "priceCny": 35,
+      "category": "food"
+    },
+    {
+      "id": "noodles",
+      "name": "一碗牛肉面",
+      "priceCny": 38,
+      "category": "food"
+    },
+    {
+      "id": "taxi",
+      "name": "一次短途打车",
+      "priceCny": 42,
+      "category": "daily"
+    },
+    {
+      "id": "movie",
+      "name": "一张电影票",
+      "priceCny": 48,
+      "category": "entertainment"
+    },
+    {
+      "id": "lunch",
+      "name": "一顿午餐",
+      "priceCny": 55,
+      "category": "food"
+    },
+    {
+      "id": "fried_chicken",
+      "name": "一份炸鸡",
+      "priceCny": 69,
+      "category": "food"
+    },
+    {
+      "id": "dessert",
+      "name": "一份甜点",
+      "priceCny": 75,
+      "category": "food"
+    },
+    {
+      "id": "hotpot_small",
+      "name": "一顿小火锅",
+      "priceCny": 118,
+      "category": "food"
+    },
+    {
+      "id": "hotpot",
+      "name": "一顿火锅",
+      "priceCny": 158,
+      "category": "food"
+    },
+    {
+      "id": "dinner",
+      "name": "一顿大餐",
+      "priceCny": 198,
+      "category": "food"
+    },
+    {
+      "id": "tshirt",
+      "name": "一件T恤",
+      "priceCny": 229,
+      "category": "daily"
+    },
+    {
+      "id": "game",
+      "name": "一款游戏",
+      "priceCny": 268,
+      "category": "entertainment"
+    },
+    {
+      "id": "massage",
+      "name": "一次放松按摩",
+      "priceCny": 298,
+      "category": "daily"
+    },
+    {
+      "id": "sneakers_fund",
+      "name": "运动鞋基金",
+      "priceCny": 399,
+      "category": "fund"
+    },
+    {
+      "id": "earbuds_fund",
+      "name": "耳机基金",
+      "priceCny": 499,
+      "category": "fund"
+    },
+    {
+      "id": "weekend_fund",
+      "name": "周末短途基金",
+      "priceCny": 688,
+      "category": "fund"
+    },
+    {
+      "id": "keyboard_fund",
+      "name": "机械键盘基金",
+      "priceCny": 799,
+      "category": "fund"
+    },
+    {
+      "id": "monitor_fund",
+      "name": "显示器基金",
+      "priceCny": 1299,
+      "category": "fund"
+    },
+    {
+      "id": "travel_fund",
+      "name": "旅行基金",
+      "priceCny": 1999,
+      "category": "fund"
+    }
+  ],
+  "workingTemplates": [
+    {
+      "id": "work_01",
+      "text": "再过 {time}，{target} 就赚回来了。"
+    },
+    {
+      "id": "work_02",
+      "text": "离 {target} 还差 {time}。"
+    },
+    {
+      "id": "work_03",
+      "text": "再工作 {time}，就能赚回 {target}。"
+    },
+    {
+      "id": "work_04",
+      "text": "按现在的速度，{time} 后就够 {target} 了。"
+    },
+    {
+      "id": "work_05",
+      "text": "下一项小目标：{target}，还需 {time}。"
+    },
+    {
+      "id": "work_06",
+      "text": "{target}，再过 {time} 就能拿下。"
+    },
+    {
+      "id": "work_07",
+      "text": "今天的 {target}，还差 {time}。"
+    },
+    {
+      "id": "work_08",
+      "text": "继续 {time}，{target} 的预算就有了。"
+    },
+    {
+      "id": "work_09",
+      "text": "再过 {time}，今天又能解锁 {target}。"
+    },
+    {
+      "id": "work_10",
+      "text": "距赚回 {target}，只剩 {time}。"
+    },
+    {
+      "id": "work_11",
+      "text": "再坚持 {time}，{target} 正好到账。"
+    },
+    {
+      "id": "work_12",
+      "text": "距离 {target}，还差一段 {time} 的工时。"
+    },
+    {
+      "id": "work_13",
+      "text": "用这 {time}，换{target}。"
+    },
+    {
+      "id": "work_14",
+      "text": "下一笔 {target}，预计还要 {time}。"
+    },
+    {
+      "id": "work_15",
+      "text": "再过 {time}，又是一个 {target} 的价值。"
+    },
+    {
+      "id": "work_16",
+      "text": "给今天加个小目标：{target}，差 {time}。"
+    },
+    {
+      "id": "work_17",
+      "text": "赚回 {target}，只要再工作 {time}。"
+    },
+    {
+      "id": "work_18",
+      "text": "再过 {time}，{target} 的钱就够了。"
+    },
+    {
+      "id": "work_19",
+      "text": "今天还差 {time}，就能换回 {target}。"
+    },
+    {
+      "id": "work_20",
+      "text": "保持节奏，{time} 后解锁 {target}。"
+    }
+  ],
+  "completedTemplates": [
+    {
+      "id": "done_01",
+      "text": "今天已经赚回 {target} 了。"
+    },
+    {
+      "id": "done_02",
+      "text": "{target} 已解锁，接着做自己的事。"
+    },
+    {
+      "id": "done_03",
+      "text": "今天的收入，够 {target} 了。"
+    },
+    {
+      "id": "done_04",
+      "text": "这会儿已经攒够 {target} 的预算。"
+    },
+    {
+      "id": "done_05",
+      "text": "{target} 这项小目标已经达成。"
+    }
+  ],
+  "stateTemplates": {
+    "paused": [
+      {
+        "id": "paused_01",
+        "text": "先歇一下，回来继续累计。"
+      },
+      {
+        "id": "paused_02",
+        "text": "暂停中，金额暂时不动。"
+      },
+      {
+        "id": "paused_03",
+        "text": "这段时间不会计入工时。"
+      },
+      {
+        "id": "paused_04",
+        "text": "休息一下，再继续。"
+      }
+    ],
+    "lunch": [
+      {
+        "id": "lunch_01",
+        "text": "午休时间，下午继续进账。"
+      },
+      {
+        "id": "lunch_02",
+        "text": "上午的工时已经算上了。"
+      },
+      {
+        "id": "lunch_03",
+        "text": "先吃饭，收入晚点再涨。"
+      },
+      {
+        "id": "lunch_04",
+        "text": "上午进度已记录。"
+      }
+    ],
+    "pre_work": [
+      {
+        "id": "pre_work_01",
+        "text": "今天的收入还没开始计时。"
+      },
+      {
+        "id": "pre_work_02",
+        "text": "等开工，数字自然会动。"
+      },
+      {
+        "id": "pre_work_03",
+        "text": "今天的目标，等上班后再开始。"
+      }
+    ],
+    "off_work": [
+      {
+        "id": "off_work_01",
+        "text": "今天的工时已经封账。"
+      },
+      {
+        "id": "off_work_02",
+        "text": "今天的工作进度已完成。"
+      },
+      {
+        "id": "off_work_03",
+        "text": "收工了，数字也下班了。"
+      },
+      {
+        "id": "off_work_04",
+        "text": "今天该挣的计划工资已经记下。"
+      }
+    ],
+    "rest_day": [
+      {
+        "id": "rest_day_01",
+        "text": "今天不用计时。"
+      },
+      {
+        "id": "rest_day_02",
+        "text": "休息日，安心休息。"
+      },
+      {
+        "id": "rest_day_03",
+        "text": "今天不营业。"
+      },
+      {
+        "id": "rest_day_04",
+        "text": "下一个工作日再继续。"
+      }
+    ],
+    "unpaid_leave": [
+      {
+        "id": "unpaid_leave_01",
+        "text": "今天已标记为请假，不计入工资。"
+      },
+      {
+        "id": "unpaid_leave_02",
+        "text": "今天请假，计时暂停。"
+      }
+    ]
+  }
+}

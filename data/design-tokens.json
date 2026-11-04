@@ -1,0 +1,82 @@
+{
+  "meta": {
+    "product": "上班鼓励器",
+    "version": "v1",
+    "units": "logical CSS px / dp-like",
+    "brandLogo": "assets/logo/app-icon-1024.png"
+  },
+  "colors": {
+    "canvas": "#FFF4DF",
+    "canvasLight": "#FFFAF0",
+    "card": "#FFFAF2",
+    "primary": "#D65A52",
+    "primaryDeep": "#B84943",
+    "ink": "#292D32",
+    "muted": "#716E69",
+    "border": "#E5DAC8",
+    "track": "#E6DCC9",
+    "buttonText": "#FFFFFF",
+    "paused": "#A87945",
+    "rest": "#292D32"
+  },
+  "window": {
+    "mainDefault": [
+      448,
+      726
+    ],
+    "mainMinimum": [
+      420,
+      650
+    ],
+    "mainMaximum": [
+      560,
+      850
+    ],
+    "settingsDefault": [
+      550,
+      650
+    ],
+    "settingsMinimum": [
+      500,
+      580
+    ]
+  },
+  "radii": {
+    "window": 22,
+    "card": 16,
+    "button": 12,
+    "input": 10
+  },
+  "spacing": {
+    "pageX": 24,
+    "pageXMinimum": 18,
+    "section": 18,
+    "cardInner": 14,
+    "row": 10,
+    "micro": 6
+  },
+  "type": {
+    "brand": 14,
+    "state": 32,
+    "moneyLarge": 46,
+    "moneyMin": 34,
+    "moneyDecimalSmall": 26,
+    "monthly": 24,
+    "body": 14,
+    "caption": 12
+  },
+  "animation": {
+    "moneyRenderMs": 100,
+    "progressRenderMs": 1000,
+    "prefersReducedMotion": "respect",
+    "transitionMs": 180
+  },
+  "rules": [
+    "No horizontal scrolling",
+    "No overflow on 100000.0000",
+    "Support DPI 100% 125% 150%",
+    "Two lines max for motivation",
+    "Main window system-level min size",
+    "Use tabular-nums for dynamic money"
+  ]
+}

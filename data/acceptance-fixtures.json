@@ -1,0 +1,140 @@
+{
+  "base": {
+    "timezoneExample": "Asia/Shanghai",
+    "date": "2026-11-04",
+    "salaryCny": 12600.0,
+    "weekdays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "shiftStart": "09:00",
+    "lunchStart": "12:00",
+    "lunchEnd": "13:00",
+    "shiftEnd": "18:00",
+    "plannedDaysNov": 21,
+    "dailyBase": 600,
+    "hourly": 75
+  },
+  "cases": [
+    {
+      "id": "FIRST_LAUNCH_BACKFILL",
+      "atLocal": "2026-11-04T11:00:00",
+      "expected": {
+        "status": "working",
+        "todayEarned": 150,
+        "monthEarned": 1350,
+        "progress": 0.25
+      }
+    },
+    {
+      "id": "PAUSE_HALF_HOUR",
+      "atLocal": "2026-11-04T11:00:00",
+      "pauses": [
+        {
+          "dateKey": "2026-11-04",
+          "startLocal": "2026-11-04T10:00:00",
+          "endLocal": "2026-11-04T10:30:00"
+        }
+      ],
+      "expected": {
+        "todayEarned": 112.5,
+        "monthEarned": 1312.5
+      }
+    },
+    {
+      "id": "COMMISSION_INDEPENDENT",
+      "atLocal": "2026-11-04T11:00:00",
+      "commissions": [
+        {
+          "dateKey": "2026-11-03",
+          "amountCny": 200
+        }
+      ],
+      "expected": {
+        "todayEarned": 150,
+        "monthEarned": 1550
+      }
+    },
+    {
+      "id": "COMMISSION_FUTURE_EXCLUDED",
+      "atLocal": "2026-11-04T11:00:00",
+      "commissions": [
+        {
+          "dateKey": "2026-11-05",
+          "amountCny": 200
+        }
+      ],
+      "expected": {
+        "monthEarned": 1350
+      }
+    },
+    {
+      "id": "OFF_OVERRIDES_DENOMINATOR",
+      "atLocal": "2026-11-04T11:00:00",
+      "overrides": {
+        "2026-11-03": "off"
+      },
+      "expected": {
+        "plannedDays": 20,
+        "todayEarned": 157.5,
+        "monthEarned": 787.5
+      }
+    },
+    {
+      "id": "UNPAID_LEAVE_PRESERVES_DENOMINATOR",
+      "atLocal": "2026-11-04T11:00:00",
+      "overrides": {
+        "2026-11-03": "unpaid_leave"
+      },
+      "expected": {
+        "plannedDays": 21,
+        "todayEarned": 150,
+        "monthEarned": 750
+      }
+    },
+    {
+      "id": "FUTURE_MAKEUP_AFFECTS_DENOMINATOR",
+      "atLocal": "2026-11-04T11:00:00",
+      "overrides": {
+        "2026-11-07": "work"
+      },
+      "expected": {
+        "plannedDays": 22
+      }
+    },
+    {
+      "id": "END_OF_SHIFT",
+      "atLocal": "2026-11-04T18:00:00",
+      "expected": {
+        "status": "off_work",
+        "todayEarned": 600,
+        "monthEarned": 1800
+      }
+    },
+    {
+      "id": "REST_WEEKEND",
+      "atLocal": "2026-11-07T11:00:00",
+      "expected": {
+        "status": "rest_day",
+        "todayEarned": 0
+      }
+    },
+    {
+      "id": "MONTH_ROLLOVER",
+      "atLocal": "2026-12-01T08:00:00",
+      "commissions": [
+        {
+          "dateKey": "2026-11-03",
+          "amountCny": 200
+        }
+      ],
+      "expected": {
+        "todayEarned": 0,
+        "monthEarned": 0
+      }
+    }
+  ]
+}
