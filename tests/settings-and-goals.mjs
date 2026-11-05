@@ -1,30 +1,15 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { chromium } from "playwright";
+import { createServer } from "vite";
 
 const host = "127.0.0.1";
-const server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "--host", host, "--port", "0"], {
-  stdio: ["ignore", "pipe", "inherit"],
-});
+const server = await createServer({ server: { host, port: 0, strictPort: false } });
 let browser;
 try {
-  const url = await new Promise((resolve, reject) => {
-    let log = "";
-    const timer = setTimeout(() => reject(new Error("Vite did not start")), 15000);
-    server.once("exit", (code) => {
-      clearTimeout(timer);
-      reject(new Error("Vite exited: " + code));
-    });
-    server.stdout.on("data", (chunk) => {
-      log += chunk;
-      const match = log.match(/http:\/\/127\.0\.0\.1:\d+\//);
-      if (match) {
-        clearTimeout(timer);
-        resolve(match[0]);
-      }
-    });
-  });
+  await server.listen();
+  const address = server.httpServer.address();
+  assert.ok(address && typeof address === "object");
+  const url = `http://${host}:${address.port}/`;
   browser = await chromium.launch({ executablePath: process.env.SHANGBAN_CHROME });
   const page = await browser.newPage({
     viewport: { width: 400, height: 550 },
@@ -228,8 +213,5 @@ try {
   console.log("Settings, delayed wheel confirmation, income/attendance, restart, 22 editable goals and per-goal reset: PASS");
 } finally {
   await browser?.close();
-  if (server.exitCode === null && server.signalCode === null) {
-    server.kill();
-    await once(server, "exit");
-  }
+  await server.close();
 }
