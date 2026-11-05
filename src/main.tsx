@@ -58,8 +58,8 @@ function App() {
   const [now, setNow] = useState(() => new Date());
   const [goalProgress, setGoalProgress] = useState<GoalProgress | null>(null);
   const goals = useMemo(
-    () => goalPool(p?.customGoals ?? [], p?.builtInGoalOverrides),
-    [p?.customGoals, p?.builtInGoalOverrides],
+    () => goalPool(p?.customGoals ?? [], p?.builtInGoalOverrides, p?.hiddenBuiltInGoalIds),
+    [p?.customGoals, p?.builtInGoalOverrides, p?.hiddenBuiltInGoalIds],
   );
   const [adding, setAdding] = useState(false);
   const [auto, setAuto] = useState<boolean | null>(null);
@@ -278,6 +278,7 @@ function App() {
                 custom={p.customGoals ?? []}
                 builtIn={effectiveBuiltInGoals(p.builtInGoalOverrides)}
                 overrides={p.builtInGoalOverrides}
+                hiddenBuiltInGoalIds={p.hiddenBuiltInGoalIds ?? []}
                 close={() => setPage("settings")}
                 save={(goal) =>
                   run(async () => {
@@ -310,14 +311,29 @@ function App() {
                   })
                 }
                 remove={(id) =>
-                  run(() =>
-                    store({
+                  run(async () => {
+                    if (id.startsWith("builtin:")) {
+                      await store({
+                        ...p,
+                        hiddenBuiltInGoalIds: Array.from(new Set([...(p.hiddenBuiltInGoalIds ?? []), id])),
+                      });
+                    } else {
+                      await store({
+                        ...p,
+                        customGoals: (p.customGoals ?? []).filter((g) => g.id !== id),
+                      });
+                    }
+                    setGoalProgress(null);
+                  })
+                }
+                restoreHidden={(id) =>
+                  run(async () => {
+                    await store({
                       ...p,
-                      customGoals: (p.customGoals ?? []).filter(
-                        (g) => g.id !== id,
-                      ),
-                    }),
-                  )
+                      hiddenBuiltInGoalIds: (p.hiddenBuiltInGoalIds ?? []).filter((item) => item !== id),
+                    });
+                    setGoalProgress(null);
+                  })
                 }
               />
             ) : (

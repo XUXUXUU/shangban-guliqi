@@ -22,6 +22,8 @@ pub struct Profile {
     custom_goals: Vec<Goal>,
     #[serde(default)]
     built_in_goal_overrides: BTreeMap<String, GoalOverride>,
+    #[serde(default)]
+    hidden_built_in_goal_ids: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -211,6 +213,14 @@ impl Profile {
             !id.starts_with("builtin:") || id.len() <= "builtin:".len() || !goal.valid()
         }) {
             return Err("内置激励目标设置无效");
+        }
+        let mut hidden_ids = HashSet::new();
+        if self.hidden_built_in_goal_ids.iter().any(|id| {
+            !id.starts_with("builtin:")
+                || id.len() <= "builtin:".len()
+                || !hidden_ids.insert(id.as_str())
+        }) {
+            return Err("隐藏内置目标列表无效");
         }
         Ok(())
     }

@@ -5,142 +5,190 @@
     "workingRefreshMinutes": 20,
     "avoidLastTargetCount": 1,
     "avoidLastTemplateCount": 3,
-    "todayReachableOnly": true,
+    "todayReachableOnly": false,
     "fallbackWhenNoGoal": "completed or off-work sentence",
-    "note": "跨午休倒计时需按排班时间而非连续秒数推算；目标价格不支持用户自定义。"
+    "note": "升级默认目录保留内置稳定 ID 与用户覆盖；自定义目标与隐藏项独立存储；跨午休按工作段计算；高价目标可跨工作日累计。"
   },
   "targets": [
     {
-      "id": "breakfast",
-      "name": "一份早餐",
-      "priceCny": 18,
+      "id": "tsingtao_green_bottle",
+      "name": "一瓶青岛绿瓶啤酒",
+      "priceCny": 8,
+      "category": "alcohol"
+    },
+    {
+      "id": "grilled_sausage",
+      "name": "一根下班路上的烤肠",
+      "priceCny": 8,
       "category": "food"
     },
     {
       "id": "americano",
-      "name": "一杯美式",
-      "priceCny": 23,
+      "name": "一杯续命冰美式",
+      "priceCny": 12,
       "category": "drink"
+    },
+    {
+      "id": "asahi_beer",
+      "name": "一瓶冰镇朝日啤酒",
+      "priceCny": 12,
+      "category": "alcohol"
+    },
+    {
+      "id": "egg_jianbing",
+      "name": "一份加蛋煎饼果子",
+      "priceCny": 15,
+      "category": "food"
     },
     {
       "id": "milk_tea",
-      "name": "一杯奶茶",
-      "priceCny": 25,
+      "name": "一杯下午三点的奶茶",
+      "priceCny": 18,
       "category": "drink"
     },
     {
+      "id": "skewers",
+      "name": "一份深夜炸串",
+      "priceCny": 26,
+      "category": "food"
+    },
+    {
+      "id": "pub_draft_beer",
+      "name": "一杯酒馆生啤",
+      "priceCny": 28,
+      "category": "alcohol"
+    },
+    {
       "id": "takeout",
-      "name": "一顿外卖",
+      "name": "一顿不凑合的外卖",
       "priceCny": 35,
       "category": "food"
     },
     {
-      "id": "noodles",
-      "name": "一碗牛肉面",
-      "priceCny": 38,
-      "category": "food"
+      "id": "craft_ipa",
+      "name": "一杯精酿 IPA",
+      "priceCny": 39,
+      "category": "alcohol"
     },
     {
       "id": "taxi",
-      "name": "一次短途打车",
-      "priceCny": 42,
+      "name": "一次不挤地铁的打车",
+      "priceCny": 45,
       "category": "daily"
     },
     {
-      "id": "movie",
-      "name": "一张电影票",
+      "id": "highball",
+      "name": "一杯日式 Highball",
       "priceCny": 48,
+      "category": "alcohol"
+    },
+    {
+      "id": "steam_sale_game",
+      "name": "一款 Steam 特价游戏",
+      "priceCny": 59,
       "category": "entertainment"
     },
     {
-      "id": "lunch",
-      "name": "一顿午餐",
-      "priceCny": 55,
-      "category": "food"
+      "id": "bar_cocktail",
+      "name": "一杯小酒馆特调",
+      "priceCny": 68,
+      "category": "alcohol"
     },
     {
-      "id": "fried_chicken",
-      "name": "一份炸鸡",
+      "id": "esports_cafe",
+      "name": "一次电竞馆开黑",
       "priceCny": 69,
+      "category": "entertainment"
+    },
+    {
+      "id": "late_night_snack",
+      "name": "一顿下班后的夜宵",
+      "priceCny": 88,
       "category": "food"
     },
     {
-      "id": "dessert",
-      "name": "一份甜点",
-      "priceCny": 75,
-      "category": "food"
+      "id": "bathhouse_relax",
+      "name": "一次洗浴中心放松",
+      "priceCny": 99,
+      "category": "daily"
     },
     {
-      "id": "hotpot_small",
-      "name": "一顿小火锅",
+      "id": "pretty_meal",
+      "name": "一次漂亮饭打卡",
       "priceCny": 118,
       "category": "food"
     },
     {
+      "id": "massage",
+      "name": "一次肩颈放松按摩",
+      "priceCny": 119,
+      "category": "daily"
+    },
+    {
+      "id": "drinks_with_friends",
+      "name": "一次和朋友的小酌",
+      "priceCny": 128,
+      "category": "alcohol"
+    },
+    {
+      "id": "escape_room",
+      "name": "一场密室逃脱",
+      "priceCny": 139,
+      "category": "entertainment"
+    },
+    {
+      "id": "game_skin",
+      "name": "一款喜欢的游戏皮肤",
+      "priceCny": 149,
+      "category": "entertainment"
+    },
+    {
       "id": "hotpot",
-      "name": "一顿火锅",
-      "priceCny": 158,
+      "name": "一顿实现肉类自由的火锅",
+      "priceCny": 159,
       "category": "food"
+    },
+    {
+      "id": "ktv_friends",
+      "name": "一次和朋友的 KTV 局",
+      "priceCny": 168,
+      "category": "entertainment"
+    },
+    {
+      "id": "livehouse_ticket",
+      "name": "一张 Livehouse 门票",
+      "priceCny": 169,
+      "category": "entertainment"
     },
     {
       "id": "dinner",
-      "name": "一顿大餐",
-      "priceCny": 198,
+      "name": "一顿像样的双人晚餐",
+      "priceCny": 199,
       "category": "food"
     },
     {
-      "id": "tshirt",
-      "name": "一件T恤",
+      "id": "hoodie",
+      "name": "一件新卫衣",
       "priceCny": 229,
       "category": "daily"
     },
     {
       "id": "game",
-      "name": "一款游戏",
-      "priceCny": 268,
+      "name": "一款 Steam 新游戏",
+      "priceCny": 269,
       "category": "entertainment"
     },
     {
-      "id": "massage",
-      "name": "一次放松按摩",
-      "priceCny": 298,
+      "id": "sneakers_fund",
+      "name": "一双喜欢的运动鞋",
+      "priceCny": 399,
       "category": "daily"
     },
     {
-      "id": "sneakers_fund",
-      "name": "运动鞋基金",
-      "priceCny": 399,
-      "category": "fund"
-    },
-    {
-      "id": "earbuds_fund",
-      "name": "耳机基金",
-      "priceCny": 499,
-      "category": "fund"
-    },
-    {
-      "id": "weekend_fund",
-      "name": "周末短途基金",
-      "priceCny": 688,
-      "category": "fund"
-    },
-    {
-      "id": "keyboard_fund",
-      "name": "机械键盘基金",
-      "priceCny": 799,
-      "category": "fund"
-    },
-    {
-      "id": "monitor_fund",
-      "name": "显示器基金",
-      "priceCny": 1299,
-      "category": "fund"
-    },
-    {
-      "id": "travel_fund",
-      "name": "旅行基金",
-      "priceCny": 1999,
-      "category": "fund"
+      "id": "concert_ticket",
+      "name": "一张演唱会门票",
+      "priceCny": 699,
+      "category": "entertainment"
     }
   ],
   "workingTemplates": [

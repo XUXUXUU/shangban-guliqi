@@ -5,8 +5,9 @@ function Digits({ value }: { value: number }) {
   const [whole, fraction] = money(value, 4).split(".");
   return (
     <>
-      {whole}
-      <span className="amount-fraction">.{fraction}</span>
+      <span className="amount-whole">{whole}</span>
+      <span className="amount-decimal" aria-hidden="true">.</span>
+      <span className="amount-fraction">{fraction}</span>
     </>
   );
 }
@@ -28,12 +29,12 @@ export function LiveAmount({
     const text = probe.current;
     if (!box || !text) return;
     const fit = () => {
-      const width = box.clientWidth - 8;
+      const width = Math.max(1, box.clientWidth - 12);
       const measured = text.getBoundingClientRect().width;
       const base = parseFloat(getComputedStyle(text).fontSize);
       setFontSize(
         measured > width
-          ? Math.max(28, Math.floor((base * width) / measured))
+          ? Math.max(16, Math.floor((base * width) / measured))
           : undefined,
       );
     };

@@ -246,8 +246,14 @@ input[type="checkbox"] {
   font-variant-numeric: tabular-nums;
 }
 .amount-value {
-  padding: 1px 4px 2px;
-  overflow-wrap: anywhere;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: 0;
+  padding: 3px 6px 5px;
+  overflow: visible;
+  letter-spacing: 0;
 }
 .amount-probe {
   position: absolute;
@@ -258,13 +264,30 @@ input[type="checkbox"] {
   visibility: hidden;
 }
 .amount-measure {
-  display: block;
+  display: flex;
+  align-items: baseline;
   width: max-content;
   white-space: nowrap;
+  letter-spacing: 0;
+}
+.amount-whole {
+  white-space: nowrap;
+  flex: 0 0 auto;
+  letter-spacing: -0.025em;
+}
+.amount-decimal {
+  font-size: 0.74em;
+  flex: 0 0 auto;
+  letter-spacing: 0;
+  padding-inline: 2px;
 }
 .amount-fraction {
+  display: inline-block;
   font-size: 0.74em;
-  letter-spacing: -0.025em;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  letter-spacing: 0;
+  padding-left: 2px;
 }
 .hourly {
   margin-top: -9px;
@@ -1063,6 +1086,24 @@ dialog::backdrop {
 .goal-entry small {
   white-space: nowrap;
 }
+.goal-row-actions { flex-shrink: 0; }
+.goal-remove {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.goal-remove:hover { color: var(--accent); background: var(--soft-accent); border-color: var(--accent-line); }
+.goal-remove svg { display: block; pointer-events: none; }
+.goals-card summary { cursor: pointer; font-weight: 650; }
 .goal-entry button {
   white-space: nowrap;
 }

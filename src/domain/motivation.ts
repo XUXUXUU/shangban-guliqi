@@ -33,11 +33,23 @@ export function makeGoal(id: string, name: string, price: string): Goal {
 }
 
 export function effectiveBuiltInGoals(overrides: GoalOverrides = {}): Goal[] {
-  return builtInGoals.map((goal) => ({ ...goal, ...overrides[goal.id] }));
+  const active = new Set(builtInGoals.map((goal) => goal.id));
+  const catalog = builtInGoals.map((goal) => ({ ...goal, ...overrides[goal.id] }));
+  // An old built-in item may disappear from a new catalog. Keep the user's edited
+  // version visible, rather than dropping a paid-for/personalized preference.
+  const legacy = Object.entries(overrides)
+    .filter(([id]) => id.startsWith("builtin:") && !active.has(id))
+    .map(([id, details]) => ({ id, ...details }));
+  return [...catalog, ...legacy];
 }
 
-export function goalPool(custom: readonly Goal[], overrides?: GoalOverrides): Goal[] {
-  const builtIn = effectiveBuiltInGoals(overrides);
+export function goalPool(
+  custom: readonly Goal[],
+  overrides?: GoalOverrides,
+  hiddenBuiltInGoalIds: readonly string[] = [],
+): Goal[] {
+  const hidden = new Set(hiddenBuiltInGoalIds);
+  const builtIn = effectiveBuiltInGoals(overrides).filter((goal) => !hidden.has(goal.id));
   return Array.from(
     { length: Math.max(custom.length, builtIn.length) },
     (_, i) => [custom[i], builtIn[i]].filter(Boolean),

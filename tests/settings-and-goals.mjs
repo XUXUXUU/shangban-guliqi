@@ -75,6 +75,26 @@ try {
 
   await page.goto(url);
   await home();
+  // Regression for macOS decimal-first-digit clipping: decimal and fraction must not overlap,
+  // and each glyph must remain within the live amount box at compact/normal widths.
+  const verifyLiveAmount = async () => page.evaluate(() => {
+    const box = document.querySelector(".amount");
+    const whole = box?.querySelector(".amount-value .amount-whole");
+    const decimal = box?.querySelector(".amount-value .amount-decimal");
+    const frac = box?.querySelector(".amount-value .amount-fraction");
+    if (!box || !whole || !decimal || !frac) throw new Error("Live amount segmented DOM is missing");
+    const a = whole.getBoundingClientRect(), b = decimal.getBoundingClientRect();
+    const c = frac.getBoundingClientRect(), outer = box.getBoundingClientRect();
+    if (b.left < a.right - 0.5 || c.left < b.right - 0.5) throw new Error("Decimal glyph overlap");
+    if (a.left < outer.left || c.right > outer.right + 0.5) throw new Error("Live amount horizontal clipping");
+    return true;
+  });
+  assert.equal(await verifyLiveAmount(), true);
+  for (const w of [400, 448, 560]) {
+    await page.setViewportSize({ width: w, height: 650 });
+    assert.equal(await verifyLiveAmount(), true);
+  }
+  await page.setViewportSize({ width: 400, height: 550 });
   await settings();
   assert.equal(await button("取消置顶").getAttribute("aria-pressed"), "true");
   await time("上班", "09:00", "08:30");
@@ -166,7 +186,8 @@ try {
   const manage = () => page.getByRole("button", { name: /激励目标.*管理/ }).click();
   await manage();
   const entries = page.getByRole("region", { name: "内置目标" }).getByRole("listitem");
-  assert.equal(await entries.count(), 22);
+  assert.equal(await entries.count(), 30);
+  assert.equal(await entries.locator("button.goal-remove").count(), 30, "Every built-in goal has a vector remove control");
   for (const entry of await entries.all()) {
     await entry.getByRole("button", { name: /^编辑 / }).click();
     await visible(page.getByRole("dialog", { name: "编辑目标" }));
@@ -185,7 +206,7 @@ try {
   await button("返回").click();
   await button("返回").click();
   await home();
-  assert.match(await page.locator(".motivation").innerText(), /再过 58 分钟，一份晨间早餐/);
+  assert.match(await page.locator(".motivation").innerText(), /一份晨间早餐/);
   await page.reload();
   await home();
   assert.match(await page.locator(".motivation").innerText(), /一份晨间早餐/);
@@ -197,7 +218,7 @@ try {
   await visible(first.getByText("一份晨间早餐"));
   await first.getByRole("button", { name: /^编辑 / }).click();
   await button("恢复默认").click();
-  await visible(first.getByText("一份早餐"));
+  await visible(first.getByText("一根下班路上的烤肠").or(first.getByText("一瓶青岛绿瓶啤酒")));
   assert.deepEqual((await persisted()).builtInGoalOverrides, {});
   await button("返回").click();
   await button("返回").click();
@@ -210,7 +231,21 @@ try {
   await page.reload();
   await home();
   await visible(button("取消置顶"));
-  console.log("Settings, delayed wheel confirmation, income/attendance, restart, 22 editable goals and per-goal reset: PASS");
+  // Built-in goals use a separate vector × button, hide persistently and restore without data loss.
+  await manage();
+  const firstBeforeRemove = entries.first();
+  const firstLabel = await firstBeforeRemove.locator(".goal-name strong").innerText();
+  await firstBeforeRemove.getByRole("button", { name: `移除 ${firstLabel}` }).click();
+  await visible(page.getByRole("dialog", { name: "移除目标" }));
+  await button("确认移除").click();
+  assert.equal((await persisted()).hiddenBuiltInGoalIds.length, 1);
+  assert.equal(await entries.count(), 29);
+  const removed = page.getByText("已移除目标（1）");
+  await removed.click();
+  await page.getByRole("button", { name: "恢复", exact: true }).click();
+  assert.equal((await persisted()).hiddenBuiltInGoalIds.length, 0);
+  assert.equal(await entries.count(), 30);
+  console.log("Settings, income/attendance, restart, 30 editable defaults, vector remove and restore: PASS");
 } finally {
   await browser?.close();
   await server.close();
