@@ -357,8 +357,7 @@ function App() {
                   })
                 }
               />
-            ) : null
-            )}
+            ) : null}
           </>
         ) : page === "history" ? (
           <div className="history">
