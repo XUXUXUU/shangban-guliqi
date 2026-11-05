@@ -261,6 +261,28 @@ function App() {
                 busy={busy}
                 reviewOnboarding={() => setPage("wizard")}
                 manageGoals={() => setPage("goals")}
+                auto={auto}
+                changeAutostart={async (enabled) => {
+                  await run(async () => {
+                    await (enabled ? enable() : disable());
+                    const actual = await isEnabled();
+                    setAuto(actual);
+                    if (actual !== enabled) throw new Error("系统未应用开机启动设置。");
+                  });
+                }}
+                clearData={async () => {
+                  if (!confirm("清空工资、排班、提成及个人目标等所有本地记录？")) return;
+                  if (!confirm("此操作不可撤销。确定清空全部数据？")) return;
+                  await run(async () => {
+                    await disable();
+                    await getCurrentWindow().setAlwaysOnTop(false);
+                    await store(empty());
+                    setAuto(false);
+                    setIsPinned(false);
+                    setGoalProgress(null);
+                    setPage("home");
+                  });
+                }}
                 close={() => {
                   setNow(new Date());
                   setPage("home");
@@ -268,7 +290,6 @@ function App() {
                 save={(settings) =>
                   run(async () => {
                     await store({ ...p, settings });
-                    setPage("home");
                   })
                 }
               />
@@ -336,57 +357,7 @@ function App() {
                   })
                 }
               />
-            ) : (
-              <>
-                <section className="card">
-                  <h2>启动与驻留</h2>
-                  <label className="row">
-                    <input
-                      type="checkbox"
-                      disabled={busy || auto === null}
-                      checked={auto ?? false}
-                      onChange={(e) => {
-                        const value = e.target.checked;
-                        action(async () => {
-                          await (value ? enable() : disable());
-                          const actual = await isEnabled();
-                          setAuto(actual);
-                          if (actual !== value)
-                            throw new Error("系统未应用开机启动设置。");
-                        });
-                      }}
-                    />
-                    开机启动
-                  </label>
-                  <p>关闭窗口后可从托盘重新打开。</p>
-                </section>
-                <section className="card">
-                  <h2>本地数据</h2>
-                  <p>收入按排班估算，数据仅存于本机。</p>
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "清空工资、排班、提成、暂停记录及激励目标设置？",
-                        ) &&
-                        confirm("此操作不可撤销。确认清空？")
-                      )
-                        action(async () => {
-                          await disable();
-                          await getCurrentWindow().setAlwaysOnTop(false);
-                          await store(empty());
-                          setAuto(false);
-                          setIsPinned(false);
-                          setGoalProgress(null);
-                          setPage("home");
-                        });
-                    }}
-                  >
-                    清空数据
-                  </button>
-                </section>
-              </>
+            ) : null
             )}
           </>
         ) : page === "history" ? (

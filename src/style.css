@@ -1118,3 +1118,67 @@ dialog::backdrop {
   gap: 14px;
   padding: 16px;
 }
+
+/* V1.8 Settings navigation: primary hub with clear secondary pages. */
+.settings-redesign { gap: 16px; }
+.settings-redesign .page-heading { margin-bottom: 4px; }
+.settings-menu { display: grid; gap: 20px; }
+.settings-menu-group { display: grid; gap: 8px; }
+.settings-menu-group > h2 { font-size: 12px; color: var(--muted); font-weight: 650; padding-inline: 3px; }
+.settings-menu-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.settings-menu-row {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 12px;
+  border-radius: 0;
+  width: 100%;
+  padding: 13px 14px;
+  min-height: 66px;
+  background: transparent;
+}
+.settings-menu-row + .settings-menu-row { border-top: 1px solid var(--line); }
+.settings-menu-row:hover { background: var(--button); }
+.settings-menu-icon {
+  display: grid; place-items: center; flex: 0 0 38px;
+  width: 38px; height: 38px;
+  background: var(--soft-accent); color: var(--accent); border-radius: 12px;
+}
+.settings-menu-text { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.settings-menu-text strong { font-size: 14px; font-weight: 680; }
+.settings-menu-text small { font-size: 11px; line-height: 1.35; }
+.settings-menu-chevron { color: var(--muted); display: grid; place-items: center; }
+.settings-editor { display: grid; gap: 14px; }
+.settings-editor .settings-fields { display: grid; gap: 12px; }
+.settings-income-preview {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--line); padding-top: 11px;
+}
+.settings-income-preview strong { color: var(--accent); font-size: 17px; }
+.settings-note { display: block; padding-left: 4px; }
+.settings-secondary-card { padding: 16px; }
+.settings-data-sections { display: grid; gap: 12px; }
+.settings-toggle-row { min-height: 42px; }
+.settings-toggle-caption { display: grid; gap: 3px; }
+.settings-toggle-caption strong { font-size: 14px; }
+.settings-toggle-caption small { font-size: 11px; }
+.settings-switch {
+  flex: 0 0 43px; width: 43px; min-height: 25px; height: 25px;
+  padding: 3px; border-radius: 30px; background: var(--neutral-pill);
+  display: flex; align-items: center; justify-content: flex-start;
+  transition: background 0.15s ease;
+}
+.settings-switch[aria-checked="true"] { background: var(--accent); justify-content: flex-end; }
+.settings-switch-knob { width: 19px; height: 19px; background: white; border-radius: 50%; box-shadow: 0 1px 3px #0002; }
+.settings-secondary-action {
+  width: 100%; min-height: 38px; display: flex; align-items: center; gap: 12px;
+  background: transparent; text-align: left; font-weight: 620; padding: 0;
+}
+.settings-secondary-action span { flex: 1; }
+.settings-danger .settings-secondary-action { color: var(--error); }
+.settings-danger small { display: block; line-height: 1.55; margin-top: 9px; }
