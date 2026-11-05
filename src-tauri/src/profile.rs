@@ -22,7 +22,7 @@ pub struct Profile {
     custom_goals: Vec<Goal>,
     #[serde(default)]
     built_in_goal_overrides: BTreeMap<String, GoalOverride>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     hidden_built_in_goal_ids: Vec<String>,
 }
 
