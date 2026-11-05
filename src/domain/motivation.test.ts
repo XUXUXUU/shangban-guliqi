@@ -88,3 +88,15 @@ test("custom names and prices validate and user targets are interleaved with bui
   assert.equal(goalPool([coffee, taxi])[2], taxi);
   assert.notEqual(goalPool([]).length, 0);
 });
+
+test("V3 catalog contains exactly thirty goals and seven alcohol entries, retaining personal legacy overrides", async () => {
+  const bank = (await import("../../data/motivations.json", { with: { type: "json" } })).default;
+  assert.equal(bank.targets.length, 30);
+  assert.equal(bank.targets.filter((goal) => goal.category === "alcohol").length, 7);
+  assert.equal(new Set(bank.targets.map((goal) => goal.id)).size, 30);
+  const legacy = { "builtin:breakfast": { name: "我的旧早餐", priceCents: 3300 } };
+  const pool = goalPool([], legacy);
+  assert.ok(pool.some((g) => g.id === "builtin:breakfast" && g.name === "我的旧早餐" && g.priceCents === 3300));
+  assert.ok(!goalPool([], legacy, ["builtin:breakfast"]).some((g) => g.id === "builtin:breakfast"));
+  assert.equal(goalPool([], legacy, []).length, 31);
+});

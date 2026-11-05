@@ -31,6 +31,7 @@ export type Profile = {
   attendanceMonths?: Record<string, boolean>;
   customGoals?: Goal[];
   builtInGoalOverrides?: GoalOverrides;
+  hiddenBuiltInGoalIds?: string[];
 };
 export const empty = (): Profile => ({
   settings: null,
