@@ -16,7 +16,7 @@ import {
   toggleAttendance,
 } from "./domain/profile";
 import type { Profile } from "./domain/profile";
-import { advanceGoal, goalPool, motivation } from "./domain/motivation";
+import { advanceGoal, effectiveBuiltInGoals, goalPool, motivation } from "./domain/motivation";
 import type { GoalProgress } from "./domain/motivation";
 import { Goals } from "./ui/Goals";
 import { Settings } from "./ui/Settings";
@@ -57,7 +57,10 @@ function App() {
   >("home");
   const [now, setNow] = useState(() => new Date());
   const [goalProgress, setGoalProgress] = useState<GoalProgress | null>(null);
-  const goals = useMemo(() => goalPool(p?.customGoals ?? []), [p?.customGoals]);
+  const goals = useMemo(
+    () => goalPool(p?.customGoals ?? [], p?.builtInGoalOverrides),
+    [p?.customGoals, p?.builtInGoalOverrides],
+  );
   const [adding, setAdding] = useState(false);
   const [auto, setAuto] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,12 +77,10 @@ function App() {
         const profile = saved ?? empty();
         const window = getCurrentWindow();
         try {
-          if (profile.pinned) {
-            await window.setAlwaysOnTop(true);
-            const applied = await window.isAlwaysOnTop();
-            setIsPinned(applied);
-            if (!applied) throw new Error("系统未恢复置顶设置。");
-          }
+          if (profile.pinned) await window.setAlwaysOnTop(true);
+          const applied = await window.isAlwaysOnTop();
+          setIsPinned(applied);
+          if (profile.pinned && !applied) throw new Error("系统未恢复置顶设置。");
         } catch (error) {
           setError(msg(error));
         } finally {
@@ -134,8 +135,8 @@ function App() {
     }
   }
   async function store(next: Profile) {
-    await invoke("save_profile", { profile: next });
-    setP(next);
+    const saved = await invoke<Profile>("save_profile", { profile: next });
+    setP(saved);
     setNow(new Date());
   }
   const action = (fn: () => Promise<void>) => {
@@ -191,7 +192,8 @@ function App() {
   const togglePin = () =>
     action(async () => {
       const window = getCurrentWindow();
-      const pinned = !isPinned;
+      const previous = await window.isAlwaysOnTop();
+      const pinned = !previous;
       try {
         await window.setAlwaysOnTop(pinned);
         if ((await window.isAlwaysOnTop()) !== pinned)
@@ -200,9 +202,9 @@ function App() {
         setIsPinned(pinned);
       } catch (error) {
         try {
-          await window.setAlwaysOnTop(isPinned);
+          await window.setAlwaysOnTop(previous);
         } finally {
-          setIsPinned(await window.isAlwaysOnTop().catch(() => isPinned));
+          setIsPinned(await window.isAlwaysOnTop().catch(() => previous));
         }
         throw error;
       }
@@ -274,9 +276,21 @@ function App() {
             {page === "goals" ? (
               <Goals
                 custom={p.customGoals ?? []}
+                builtIn={effectiveBuiltInGoals(p.builtInGoalOverrides)}
+                overrides={p.builtInGoalOverrides}
                 close={() => setPage("settings")}
                 save={(goal) =>
                   run(async () => {
+                    if (goal.id.startsWith("builtin:")) {
+                      await store({
+                        ...p,
+                        builtInGoalOverrides: {
+                          ...p.builtInGoalOverrides,
+                          [goal.id]: { name: goal.name, priceCents: goal.priceCents },
+                        },
+                      });
+                      return;
+                    }
                     const custom = p.customGoals ?? [];
                     const exists = custom.some((g) => g.id === goal.id);
                     await store({
@@ -286,6 +300,13 @@ function App() {
                         : [goal, ...custom],
                     });
                     if (!exists) setGoalProgress(null);
+                  })
+                }
+                reset={(id) =>
+                  run(() => {
+                    const builtInGoalOverrides = { ...p.builtInGoalOverrides };
+                    delete builtInGoalOverrides[id];
+                    return store({ ...p, builtInGoalOverrides });
                   })
                 }
                 remove={(id) =>
@@ -302,16 +323,7 @@ function App() {
             ) : (
               <>
                 <section className="card">
-                  <h2>窗口与开机启动</h2>
-                  <label className="row">
-                    <input
-                      type="checkbox"
-                      disabled={busy}
-                      checked={isPinned}
-                      onChange={togglePin}
-                    />
-                    窗口置顶
-                  </label>
+                  <h2>启动与驻留</h2>
                   <label className="row">
                     <input
                       type="checkbox"
@@ -340,7 +352,7 @@ function App() {
                     onClick={() => {
                       if (
                         confirm(
-                          "清空工资、排班、提成、暂停记录及自定义目标？",
+                          "清空工资、排班、提成、暂停记录及激励目标设置？",
                         ) &&
                         confirm("此操作不可撤销。确认清空？")
                       )

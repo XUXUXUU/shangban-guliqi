@@ -55,6 +55,10 @@ jobs:
       - run: node --test reference/earnings.test.mjs
       - run: npm run build
       - if: matrix.native_test
+        run: npx playwright install chromium
+      - if: matrix.native_test
+        run: npm run test:ui
+      - if: matrix.native_test
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}
       - name: Build installer
         uses: tauri-apps/tauri-action@v1

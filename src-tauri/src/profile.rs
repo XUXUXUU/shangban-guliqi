@@ -20,14 +20,32 @@ pub struct Profile {
     attendance_months: BTreeMap<String, bool>,
     #[serde(default)]
     custom_goals: Vec<Goal>,
+    #[serde(default)]
+    built_in_goal_overrides: BTreeMap<String, GoalOverride>,
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Goal {
     id: String,
+    #[serde(flatten)]
+    details: GoalOverride,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GoalOverride {
     name: String,
     price_cents: u64,
+}
+
+impl GoalOverride {
+    fn valid(&self) -> bool {
+        self.name == self.name.trim()
+            && (2..=24).contains(&self.name.chars().count())
+            && !self.name.chars().any(|c| c <= '\u{1f}' || c == '\u{7f}')
+            && (1..=99_999_999).contains(&self.price_cents)
+    }
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -183,13 +201,16 @@ impl Profile {
             if !goal.id.starts_with("custom:")
                 || goal.id.len() <= "custom:".len()
                 || !goal_ids.insert(&goal.id)
-                || goal.name != goal.name.trim()
-                || !(2..=24).contains(&goal.name.chars().count())
-                || goal.name.chars().any(|c| c <= '\u{1f}' || c == '\u{7f}')
-                || !(1..=99_999_999).contains(&goal.price_cents)
+                || !goal.details.valid()
             {
                 return Err("自定义激励目标无效");
             }
+        }
+        // Keep overrides for stable IDs even if a later catalog no longer lists an item.
+        if self.built_in_goal_overrides.iter().any(|(id, goal)| {
+            !id.starts_with("builtin:") || id.len() <= "builtin:".len() || !goal.valid()
+        }) {
+            return Err("内置激励目标设置无效");
         }
         Ok(())
     }

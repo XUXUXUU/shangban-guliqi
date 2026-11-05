@@ -57,12 +57,32 @@ fn load_profile(db: State<Db>) -> Result<Option<Profile>, &'static str> {
 }
 
 #[tauri::command]
-fn save_profile(db: State<Db>, profile: Profile) -> Result<(), &'static str> {
-    let conn = db.0.lock().map_err(|_| "无法保存本地数据")?;
+fn save_profile(db: State<Db>, profile: Profile) -> Result<Profile, &'static str> {
+    let mut conn = db.0.lock().map_err(|_| "无法保存本地数据")?;
+    write_profile(&mut conn, &profile)
+}
+
+fn write_profile(conn: &mut Connection, profile: &Profile) -> Result<Profile, &'static str> {
     profile.validate()?;
-    let payload = serde_json::to_string(&profile).map_err(|_| "本地数据格式无效")?;
-    conn.execute("INSERT INTO profile (id,payload) VALUES (1,?1) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload", params![payload]).map_err(|_| "无法保存本地数据")?;
-    Ok(())
+    let payload = serde_json::to_string(profile).map_err(|_| "本地数据格式无效")?;
+    let transaction = conn.transaction().map_err(|_| "无法保存本地数据")?;
+    transaction
+        .execute(
+            "INSERT INTO profile (id,payload) VALUES (1,?1) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+            params![payload],
+        )
+        .map_err(|_| "无法保存本地数据")?;
+    let saved: String = transaction
+        .query_row("SELECT payload FROM profile WHERE id=1", [], |row| {
+            row.get(0)
+        })
+        .map_err(|_| "无法核实已保存的本地数据")?;
+    if saved != payload {
+        return Err("保存内容与读回的数据不一致");
+    }
+    let saved = serde_json::from_str(&saved).map_err(|_| "本地数据格式无效")?;
+    transaction.commit().map_err(|_| "无法保存本地数据")?;
+    Ok(saved)
 }
 
 fn keep_window_visible(window: &WebviewWindow) {
@@ -229,6 +249,59 @@ fn main() {
 mod tests {
     use super::*;
     #[test]
+    fn settings_and_goals_survive_reopen_and_mismatches_roll_back() {
+        let path =
+            std::env::temp_dir().join(format!("shangban-settings-{}.sqlite", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let mut db = Connection::open(&path).unwrap();
+        migrate(&db).unwrap();
+        let mut fixture = serde_json::json!({
+            "settings": {
+                "salaryCents": 500000, "attendanceCents": 20000, "payday": 10,
+                "weekdays": [1, 2, 3, 4, 5], "shiftStart": "09:00", "shiftEnd": "18:00",
+                "lunchStart": "12:00", "lunchEnd": "14:00"
+            },
+            "onboardingCompleted": true, "pinned": true, "theme": "dark",
+            "pauses": [{"dateKey": "2026-11-04", "startedAt": 1793757600000_i64, "endedAt": null}],
+            "commissions": [{"id": "fixture", "dateKey": "2026-11-03", "amountCents": 10000}],
+            "overrides": {"2026-11-03": "off"}, "attendanceMonths": {"2026-10": false},
+            "customGoals": [{"id": "custom:example", "name": "一次洗车", "priceCents": 8000}]
+        });
+        write_profile(&mut db, &serde_json::from_value(fixture.clone()).unwrap()).unwrap();
+        fixture["settings"]["shiftStart"] = "08:30".into();
+        fixture["settings"]["shiftEnd"] = "19:00".into();
+        fixture["settings"]["salaryCents"] = 600000.into();
+        fixture["settings"]["attendanceCents"] = 50000.into();
+        fixture["builtInGoalOverrides"] = serde_json::json!({
+            "builtin:breakfast": {"name": "一份晨间早餐", "priceCents": 3025}
+        });
+        let edited = serde_json::from_value(fixture.clone()).unwrap();
+        write_profile(&mut db, &edited).unwrap();
+        drop(db);
+
+        let mut db = Connection::open(&path).unwrap();
+        let stored = |db: &Connection| -> String {
+            db.query_row("SELECT payload FROM profile WHERE id=1", [], |row| {
+                row.get(0)
+            })
+            .unwrap()
+        };
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&stored(&db)).unwrap(),
+            fixture
+        );
+        db.execute_batch("CREATE TRIGGER alter_save AFTER UPDATE ON profile BEGIN UPDATE profile SET payload='{}' WHERE id=1; END;").unwrap();
+        let result = write_profile(&mut db, &edited);
+        assert_eq!(result.err(), Some("保存内容与读回的数据不一致"));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&stored(&db)).unwrap(),
+            fixture
+        );
+        drop(db);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn migration_preserves_profile_on_reopen() {
         let path =
             std::env::temp_dir().join(format!("shangban-test-{}.sqlite", std::process::id()));
@@ -267,13 +340,8 @@ mod tests {
         ]);
         let parsed: Profile = serde_json::from_value(with_goal.clone()).unwrap();
         parsed.validate().unwrap();
-        let payload = serde_json::to_string(&parsed).unwrap();
-        db.execute("UPDATE profile SET payload=?1 WHERE id=1", [payload])
-            .unwrap();
-        let saved: String = db
-            .query_row("SELECT payload FROM profile", [], |r| r.get(0))
-            .unwrap();
-        let roundtrip: serde_json::Value = serde_json::from_str(&saved).unwrap();
+        let mut db = db;
+        let roundtrip = serde_json::to_value(write_profile(&mut db, &parsed).unwrap()).unwrap();
         assert_eq!(roundtrip, with_goal);
         with_goal["customGoals"][0]["priceCents"] = 0.into();
         let invalid: Profile = serde_json::from_value(with_goal).unwrap();

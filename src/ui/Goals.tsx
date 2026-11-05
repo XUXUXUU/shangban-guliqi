@@ -1,20 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { builtInGoals, makeGoal } from "../domain/motivation";
-import type { Goal } from "../domain/motivation";
+import { makeGoal } from "../domain/motivation";
+import type { Goal, GoalOverrides } from "../domain/motivation";
 import { money, msg } from "./format";
 
 type Edit = { goal?: Goal; delete?: boolean };
 
 export function Goals({
   custom,
+  builtIn,
+  overrides,
   close,
   save,
   remove,
+  reset,
 }: {
   custom: Goal[];
+  builtIn: Goal[];
+  overrides?: GoalOverrides;
   close: () => void;
   save: (goal: Goal) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  reset: (id: string) => Promise<void>;
 }) {
   const [edit, setEdit] = useState<Edit | null>(null);
   return (
@@ -67,10 +73,19 @@ export function Goals({
       <section className="card goals-card" aria-labelledby="built-in-goals">
         <h2 id="built-in-goals">内置目标</h2>
         <ul>
-          {builtInGoals.map((goal) => (
+          {builtIn.map((goal) => (
             <li key={goal.id} className="goal-entry">
-              <span>{goal.name}</span>
-              <small>{money(goal.priceCents / 100)}</small>
+              <div className="goal-name">
+                <strong>{goal.name}</strong>
+                <small>{money(goal.priceCents / 100)}</small>
+              </div>
+              <button
+                type="button"
+                aria-label={`编辑 ${goal.name}`}
+                onClick={() => setEdit({ goal })}
+              >
+                编辑
+              </button>
             </li>
           ))}
         </ul>
@@ -81,6 +96,7 @@ export function Goals({
           close={() => setEdit(null)}
           save={save}
           remove={remove}
+          reset={edit.goal && overrides?.[edit.goal.id] ? reset : undefined}
         />
       )}
     </div>
@@ -92,11 +108,13 @@ function GoalDialog({
   close,
   save,
   remove,
+  reset,
 }: {
   edit: Edit;
   close: () => void;
   save: (goal: Goal) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  reset?: (id: string) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const submitting = useRef(false);
@@ -126,7 +144,10 @@ function GoalDialog({
           setBusy(true);
           setError("");
           try {
-            if (edit.delete && edit.goal) await remove(edit.goal.id);
+            const submitter = (e.nativeEvent as SubmitEvent).submitter;
+            const restore = submitter?.getAttribute("value") === "restore";
+            if (restore && reset && edit.goal) await reset(edit.goal.id);
+            else if (edit.delete && edit.goal) await remove(edit.goal.id);
             else
               await save(
                 makeGoal(edit.goal?.id ?? crypto.randomUUID(), name, price),
@@ -149,7 +170,7 @@ function GoalDialog({
               目标名称
               <input
                 autoFocus
-                required
+                aria-required="true"
                 maxLength={48}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -158,7 +179,7 @@ function GoalDialog({
             <label>
               价格（元）
               <input
-                required
+                aria-required="true"
                 inputMode="decimal"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -184,6 +205,11 @@ function GoalDialog({
             {edit.delete ? "删除" : "保存"}
           </button>
         </div>
+        {reset && (
+          <button type="submit" value="restore" disabled={busy}>
+            恢复默认
+          </button>
+        )}
       </form>
     </dialog>
   );

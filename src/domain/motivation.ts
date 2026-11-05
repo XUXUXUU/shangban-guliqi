@@ -4,6 +4,7 @@ import type { getSnapshot, Settings } from "./earnings.ts";
 import { cents } from "./profile.ts";
 
 export type Goal = { id: string; name: string; priceCents: number };
+export type GoalOverrides = Record<string, Omit<Goal, "id">>;
 export type GoalProgress = { id: string; date: string; startHours: number };
 type Snapshot = ReturnType<typeof getSnapshot>;
 
@@ -23,16 +24,23 @@ export function makeGoal(id: string, name: string, price: string): Goal {
   if (priceCents > 99_999_999)
     throw new Error("价格须在 ¥0.01–¥999,999.99 之间。");
   return {
-    id: id.startsWith("custom:") ? id : `custom:${id}`,
+    id: id.startsWith("custom:") || id.startsWith("builtin:")
+      ? id
+      : `custom:${id}`,
     name,
     priceCents,
   };
 }
 
-export function goalPool(custom: readonly Goal[]): Goal[] {
+export function effectiveBuiltInGoals(overrides: GoalOverrides = {}): Goal[] {
+  return builtInGoals.map((goal) => ({ ...goal, ...overrides[goal.id] }));
+}
+
+export function goalPool(custom: readonly Goal[], overrides?: GoalOverrides): Goal[] {
+  const builtIn = effectiveBuiltInGoals(overrides);
   return Array.from(
-    { length: Math.max(custom.length, builtInGoals.length) },
-    (_, i) => [custom[i], builtInGoals[i]].filter(Boolean),
+    { length: Math.max(custom.length, builtIn.length) },
+    (_, i) => [custom[i], builtIn[i]].filter(Boolean),
   ).flat();
 }
 

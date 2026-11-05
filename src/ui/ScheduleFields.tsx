@@ -1,4 +1,5 @@
 import { dailyMinutes, hours } from "../domain/profile";
+import type { Dispatch, SetStateAction } from "react";
 import type { Rules } from "../domain/profile";
 import { TimePicker } from "./TimePicker";
 
@@ -8,7 +9,7 @@ export function ScheduleFields({
   change,
 }: {
   draft: Rules;
-  change: (next: Rules) => void;
+  change: Dispatch<SetStateAction<Rules>>;
 }) {
   return (
     <div className="schedule">
@@ -26,12 +27,12 @@ export function ScheduleFields({
               aria-label={`周${name}`}
               aria-pressed={draft.weekdays.includes(day)}
               onClick={() =>
-                change({
-                  ...draft,
-                  weekdays: draft.weekdays.includes(day)
-                    ? draft.weekdays.filter((d) => d !== day)
-                    : [...draft.weekdays, day],
-                })
+                change((current) => ({
+                  ...current,
+                  weekdays: current.weekdays.includes(day)
+                    ? current.weekdays.filter((d) => d !== day)
+                    : [...current.weekdays, day],
+                }))
               }
             >
               {name}
@@ -54,7 +55,7 @@ export function ScheduleFields({
               key={key}
               label={name}
               value={draft[key]}
-              change={(value) => change({ ...draft, [key]: value })}
+              change={(value) => change((current) => ({ ...current, [key]: value }))}
             />
           ))}
         </div>

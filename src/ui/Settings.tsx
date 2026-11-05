@@ -31,6 +31,7 @@ export function Settings({
   now: Date;
 }) {
   const [draft, setDraft] = useState(initial);
+  const [salary, setSalary] = useState(String(initial.salaryCents / 100));
   const [bonus, setBonus] = useState(
     String((initial.attendanceCents ?? 0) / 100),
   );
@@ -42,7 +43,7 @@ export function Settings({
       /^0+(\.0{1,2})?$/.test(bonus.trim()) || !bonus.trim()
         ? 0
         : cents(bonus.trim());
-    const next = { ...draft, attendanceCents };
+    const next = { ...draft, salaryCents: cents(salary.trim()), attendanceCents };
     checked(next);
     preview = profileSnapshot({ ...profile, settings: next }, now);
     candidate = next;
@@ -54,7 +55,8 @@ export function Settings({
       className="settings"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!candidate) return;
+        if (!candidate || busy) return;
+        setError("");
         try {
           await save(candidate);
         } catch (err) {
@@ -93,18 +95,9 @@ export function Settings({
           <label>
             税后月薪（元）
             <input
-              key={initial.salaryCents}
               inputMode="decimal"
-              defaultValue={initial.salaryCents / 100}
-              onChange={(e) => {
-                let salaryCents = 0;
-                try {
-                  salaryCents = cents(e.target.value.trim());
-                } catch {
-                  /* invalid draft */
-                }
-                setDraft({ ...draft, salaryCents });
-              }}
+              value={salary}
+              onChange={(e) => setSalary(e.target.value)}
             />
           </label>
           <label>
@@ -119,7 +112,7 @@ export function Settings({
             <small>发薪日</small>
             <DayOfMonthPicker
               value={draft.payday}
-              change={(payday) => setDraft({ ...draft, payday })}
+              change={(payday) => setDraft((current) => ({ ...current, payday }))}
             />
           </div>
         </div>
@@ -151,9 +144,14 @@ export function Settings({
           {error}
         </p>
       )}
-      <button className="primary" disabled={busy || !candidate}>
-        保存设置
-      </button>
+      <div className="row between">
+        <button type="button" disabled={busy} onClick={close}>
+          取消
+        </button>
+        <button className="primary" disabled={busy || !candidate}>
+          保存设置
+        </button>
+      </div>
     </form>
   );
 }
