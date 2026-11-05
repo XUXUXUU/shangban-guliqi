@@ -1,6 +1,6 @@
 
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 import { createServer } from "vite";
 
 const server = await createServer({ server: { host: "127.0.0.1", port: 0, strictPort: false } });
@@ -10,7 +10,7 @@ try {
   const address = server.httpServer.address();
   assert.ok(address && typeof address === "object");
   const url = `http://127.0.0.1:${address.port}/`;
-  browser = await chromium.launch({ executablePath: process.env.SHANGBAN_CHROME });
+  browser = await (process.env.SHANGBAN_BROWSER === "webkit" ? webkit : chromium).launch({ executablePath: process.env.SHANGBAN_CHROME });
   const page = await browser.newPage({
     viewport: { width: 400, height: 550 },
     timezoneId: "Asia/Shanghai",
