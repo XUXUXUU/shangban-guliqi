@@ -485,10 +485,23 @@ dialog::backdrop {
   }
 }
 
-.settings > .primary {
+.settings-fields {
+  display: grid;
+  gap: var(--s3);
+  min-inline-size: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-actions {
   position: sticky;
   bottom: 0;
   z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s2);
+  background: var(--canvas);
   box-shadow: 0 0 0 5px var(--canvas);
 }
 

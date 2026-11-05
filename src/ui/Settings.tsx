@@ -89,51 +89,53 @@ export function Settings({
           管理 <Chevron right />
         </span>
       </button>
-      <ScheduleFields draft={draft} change={setDraft} />
-      <section className="card settings-finance">
-        <div className="finance-fields">
-          <label>
-            税后月薪（元）
-            <input
-              inputMode="decimal"
-              value={salary}
-              onChange={(e) => setSalary(e.target.value)}
-            />
-          </label>
-          <label>
-            满勤奖金（元）
-            <input
-              inputMode="decimal"
-              value={bonus}
-              onChange={(e) => setBonus(e.target.value)}
-            />
-          </label>
-          <div className="settings-payday">
-            <small>发薪日</small>
-            <DayOfMonthPicker
-              value={draft.payday}
-              change={(payday) => setDraft((current) => ({ ...current, payday }))}
-            />
+      <fieldset className="settings-fields" disabled={busy}>
+        <ScheduleFields draft={draft} change={setDraft} />
+        <section className="card settings-finance">
+          <div className="finance-fields">
+            <label>
+              税后月薪（元）
+              <input
+                inputMode="decimal"
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+              />
+            </label>
+            <label>
+              满勤奖金（元）
+              <input
+                inputMode="decimal"
+                value={bonus}
+                onChange={(e) => setBonus(e.target.value)}
+              />
+            </label>
+            <div className="settings-payday">
+              <small>发薪日</small>
+              <DayOfMonthPicker
+                value={draft.payday}
+                change={(payday) => setDraft((current) => ({ ...current, payday }))}
+              />
+            </div>
           </div>
-        </div>
-        {paydayInMonth(draft.payday, now) !== draft.payday && (
-          <small>本月按 {paydayInMonth(draft.payday, now)} 日显示</small>
-        )}
-        <dl className="preview">
-          <div>
-            <dt>时薪</dt>
-            <dd>{preview ? money(preview.hourlyRate) : "—"}</dd>
-          </div>
-          <div>
-            <dt>今日已赚</dt>
-            <dd>{preview ? money(preview.todayEarned) : "—"}</dd>
-          </div>
-          <div>
-            <dt>本月累计</dt>
-            <dd>{preview ? money(preview.monthlyEarned) : "—"}</dd>
-          </div>
-        </dl>
-      </section>
+          {paydayInMonth(draft.payday, now) !== draft.payday && (
+            <small>本月按 {paydayInMonth(draft.payday, now)} 日显示</small>
+          )}
+          <dl className="preview">
+            <div>
+              <dt>时薪</dt>
+              <dd>{preview ? money(preview.hourlyRate) : "—"}</dd>
+            </div>
+            <div>
+              <dt>今日已赚</dt>
+              <dd>{preview ? money(preview.todayEarned) : "—"}</dd>
+            </div>
+            <div>
+              <dt>本月累计</dt>
+              <dd>{preview ? money(preview.monthlyEarned) : "—"}</dd>
+            </div>
+          </dl>
+        </section>
+      </fieldset>
       {!candidate && (
         <p className="error" role="status">
           请检查金额与排班后保存。
@@ -144,7 +146,7 @@ export function Settings({
           {error}
         </p>
       )}
-      <div className="row between">
+      <div className="settings-actions">
         <button type="button" disabled={busy} onClick={close}>
           取消
         </button>

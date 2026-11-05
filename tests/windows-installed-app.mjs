@@ -52,7 +52,6 @@ async function withApp(port, run) {
 function controls(page) {
   const button = (name) => page.getByRole("button", { name, exact: true });
   const field = (name) => page.getByRole("textbox", { name, exact: true });
-  const pin = (name) => page.getByRole("button", { name, exact: true });
   const manage = () => page.getByRole("button", { name: /激励目标.*管理/ }).click();
   const first = page.getByRole("region", { name: "内置目标" }).getByRole("listitem").first();
   const wait = (locator) => locator.waitFor({ state: "visible" });
@@ -62,11 +61,11 @@ function controls(page) {
     await button("确认").click();
     await wait(button(name + " " + newTime));
   };
-  return { button, field, pin, manage, first, wait, changeHour };
+  return { button, field, manage, first, wait, changeHour };
 }
 
 await withApp(39271, async (page) => {
-  const { button, field, pin, manage, first, wait, changeHour } = controls(page);
+  const { button, field, manage, first, wait, changeHour } = controls(page);
   const salary = field("每月税后工资（元）");
   await wait(salary);
   assert.equal(await salary.inputValue(), "");
@@ -76,8 +75,8 @@ await withApp(39271, async (page) => {
   await button("开始使用").click();
   await button("设置").click();
   assert.equal(await page.getByRole("checkbox", { name: "窗口置顶" }).count(), 0);
-  await pin("置顶窗口").click();
-  await wait(pin("取消置顶"));
+  await button("置顶窗口").click();
+  await wait(button("取消置顶"));
   await changeHour("上班", "09:00", "ArrowUp", "08:00");
   await changeHour("下班", "18:00", "ArrowDown", "19:00");
   await changeHour("午休结束", "13:00", "ArrowDown", "14:00");
@@ -95,8 +94,8 @@ await withApp(39271, async (page) => {
 });
 
 await withApp(39272, async (page) => {
-  const { button, field, pin, manage, first, wait } = controls(page);
-  await wait(pin("取消置顶"));
+  const { button, field, manage, first, wait } = controls(page);
+  await wait(button("取消置顶"));
   await button("设置").click();
   for (const name of ["上班 08:00", "下班 19:00", "午休结束 14:00"]) await wait(button(name));
   assert.equal(await field("税后月薪（元）").inputValue(), "6000.05");

@@ -53,6 +53,7 @@ try {
         if (cmd === "load_profile") return JSON.parse(localStorage.profile);
         if (cmd === "save_profile") {
           window.saveCalls++;
+          if (window.pauseWrite) await new Promise((resolve) => { window.resumeWrite = resolve; });
           if (window.failWrite) throw new Error("测试：无法核实保存");
           localStorage.profile = JSON.stringify(args.profile);
           return JSON.parse(localStorage.profile);
@@ -136,8 +137,12 @@ try {
   const [, , monthWithBonus] = await preview();
   assert.equal(Math.round((money(monthWithBonus) - money(monthAfter)) * 100), 30000);
 
-  await page.evaluate(() => { window.failWrite = true; window.saveCalls = 0; });
+  await page.evaluate(() => { window.failWrite = true; window.pauseWrite = true; window.saveCalls = 0; });
   await button("保存设置").click();
+  await page.waitForFunction(() => typeof window.resumeWrite === "function");
+  assert.equal(await salary.isDisabled(), true);
+  assert.equal(await button("上班 08:00").isDisabled(), true);
+  await page.evaluate(() => { window.pauseWrite = false; window.resumeWrite(); });
   await visible(page.getByRole("alert").filter({ hasText: "无法核实保存" }));
   assert.deepEqual(await persisted(), original);
   assert.equal(await salary.inputValue(), "6000");
@@ -153,6 +158,7 @@ try {
   assert.deepEqual(saved.overrides, fixture.overrides);
   assert.equal(saved.pinned, true);
   assert.equal(await page.locator(".monthly").innerText().then((v) => v.trim()), monthWithBonus);
+  assert.equal(await page.locator(".hourly strong").innerText().then(money), Number((money(rateAfter) / 3600).toFixed(4)));
   assert.equal(Math.round((await page.locator(".amount-value").innerText().then(money)) * 100), Math.round(money(todayAfter) * 100));
   await button("满勤奖：已满勤").click();
   await visible(button("满勤奖：无满勤"));
