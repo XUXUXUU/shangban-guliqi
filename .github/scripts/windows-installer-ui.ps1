@@ -118,14 +118,14 @@ try {
   $script:ActiveProcess = $null
 
   $window = Start-Uninstaller
-  if ($window.Current.Name -ne '卸载上班鼓励器') { throw "Unexpected uninstall title: $($window.Current.Name)" }
+  Capture $window '02-uninstall-confirm'
+  if ($window.Current.Name.Trim() -ne '卸载上班鼓励器') { throw "Unexpected uninstall title: $($window.Current.Name)" }
   $box = Find-Control $window '同时删除应用数据'
   $handle = [IntPtr]$box.Current.NativeWindowHandle
   if ($handle -eq [IntPtr]::Zero) { throw 'Could not resolve the native data deletion checkbox.' }
   $state = [InstallerWindow]::SendMessage($handle, 0x00F0, [IntPtr]::Zero, [IntPtr]::Zero)
   if ($state -ne [IntPtr]::Zero) { throw 'Data deletion was preselected.' }
   $null = Find-Control $window '卸载位置：'
-  Capture $window '02-uninstall-confirm'
   Invoke-Control (Find-Control $window '取消')
   Wait-Uninstaller
   if (!(Test-Path -LiteralPath $app) -or !(Test-Path -LiteralPath $fixture)) { throw 'Cancel modified the installation or data.' }
