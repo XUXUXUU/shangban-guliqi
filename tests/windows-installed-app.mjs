@@ -80,7 +80,7 @@ await withApp(async (app) => {
   for (const [key, value] of Object.entries(legacyProfile)) assert.deepEqual(profile[key], value);
 
   const ui = spawn("powershell.exe", [
-    "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+    "-NoProfile", "-NonInteractive",
     "-File", ".github/scripts/windows-app-ui.ps1", "-AppPid", String(app.pid), "-EvidenceDir", evidence,
   ], { stdio: "inherit" });
   const [code] = await once(ui, "exit");

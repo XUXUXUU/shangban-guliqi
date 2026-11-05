@@ -53,7 +53,14 @@ function Capture($window, $name) {
 }
 function Find-Named($window, [string]$name) {
   $condition = New-Object System.Windows.Automation.PropertyCondition($u::NameProperty, $name)
-  return $window.FindFirst($scope, $condition)
+  $exact = $window.FindFirst($scope, $condition)
+  if ($exact) { return $exact }
+  # The standard NSIS buttons append keyboard accelerators such as "(C)".
+  $all = $window.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition)
+  foreach ($control in $all) {
+    $normalized = ($control.Current.Name -replace '&', '' -replace '\s*\([A-Za-z]\)\s*<?\s*>?$', '').Trim()
+    if ($normalized -eq $name) { return $control }
+  }
 }
 function Find-Control($window, [string]$name) {
   $control = Find-Named $window $name
@@ -144,9 +151,9 @@ try {
   Invoke-Control $yes
   Finish-Uninstaller $window
   if ((Test-Path -LiteralPath $app) -or (Test-Path -LiteralPath $fixture)) { throw 'Confirmed opt-in uninstall did not remove fixture and executable.' }
-  'Native Windows installer/uninstaller localization, cancel and opt-in passed.' | Set-Content (Join-Path $evidence 'result.txt')
+  'Native Windows installer/uninstaller localization, cancel and opt-in passed.' | Set-Content -Encoding UTF8 (Join-Path $evidence 'result.txt')
 } catch {
-  $_ | Out-String | Set-Content (Join-Path $evidence 'result.txt')
+  $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $evidence 'result.txt')
   throw
 } finally {
   if ($script:ActiveProcess -and !$script:ActiveProcess.HasExited) {

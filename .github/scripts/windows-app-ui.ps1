@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This script requires a disposable GitHub runner.' }
 
 try {
-  Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
+  Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
   $u = [System.Windows.Automation.AutomationElement]
   $scope = [System.Windows.Automation.TreeScope]::Descendants
   $app = Get-Process -Id $AppPid
@@ -31,7 +31,11 @@ try {
     $control.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
   }
   function Read-Input([string]$name) {
-    $control = Find-AppControl $name
+    $label = New-Object System.Windows.Automation.PropertyCondition($u::NameProperty, $name)
+    $edit = New-Object System.Windows.Automation.PropertyCondition($u::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)
+    $condition = New-Object System.Windows.Automation.AndCondition($label, $edit)
+    $control = $root.FindFirst($scope, $condition)
+    if (!$control) { throw "UI Automation could not find the edit field: $name" }
     return $control.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
   }
 
@@ -47,8 +51,8 @@ try {
   if ((Read-Input '价格（元）') -ne '30.25') { throw 'The goal editor did not display the saved price.' }
   $null = Find-AppControl '恢复默认'
   'Native Windows UI displayed the migrated settings and pin, and opened the saved built-in goal in its editor.' |
-    Set-Content (Join-Path $EvidenceDir 'app-ui-result.txt')
+    Set-Content -Encoding UTF8 (Join-Path $EvidenceDir 'app-ui-result.txt')
 } catch {
-  $_ | Out-String | Set-Content (Join-Path $EvidenceDir 'app-ui-result.txt')
+  $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $EvidenceDir 'app-ui-result.txt')
   throw
 }
