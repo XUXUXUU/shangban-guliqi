@@ -1,6 +1,6 @@
 {
   "name": "shang-ban-gu-li-qi",
-  "version": "1.5.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "check": "tsc --noEmit",
     "lint": "eslint src",
     "test": "node --experimental-strip-types --test src/domain/*.test.ts",
+    "test:ui": "node tests/settings-and-goals.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -19,12 +20,13 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/node": "^24",
     "eslint": "^9",
-    "typescript-eslint": "^8",
+    "playwright": "^1.64.1",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8",
     "vite": "^7"
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -16,7 +16,9 @@ import {
   toggleAttendance,
 } from "./domain/profile";
 import type { Profile } from "./domain/profile";
-import { motivation } from "./domain/motivation";
+import { advanceGoal, effectiveBuiltInGoals, goalPool, motivation } from "./domain/motivation";
+import type { GoalProgress } from "./domain/motivation";
+import { Goals } from "./ui/Goals";
 import { Settings } from "./ui/Settings";
 import {
   WindowControls,
@@ -50,10 +52,15 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = p?.theme ?? "light";
   }, [p?.theme]);
-  const [page, setPage] = useState<"home" | "settings" | "history" | "wizard">(
-    "home",
-  );
+  const [page, setPage] = useState<
+    "home" | "settings" | "history" | "wizard" | "goals"
+  >("home");
   const [now, setNow] = useState(() => new Date());
+  const [goalProgress, setGoalProgress] = useState<GoalProgress | null>(null);
+  const goals = useMemo(
+    () => goalPool(p?.customGoals ?? [], p?.builtInGoalOverrides),
+    [p?.customGoals, p?.builtInGoalOverrides],
+  );
   const [adding, setAdding] = useState(false);
   const [auto, setAuto] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,12 +77,10 @@ function App() {
         const profile = saved ?? empty();
         const window = getCurrentWindow();
         try {
-          if (profile.pinned) {
-            await window.setAlwaysOnTop(true);
-            const applied = await window.isAlwaysOnTop();
-            setIsPinned(applied);
-            if (!applied) throw new Error("系统未恢复置顶设置。");
-          }
+          if (profile.pinned) await window.setAlwaysOnTop(true);
+          const applied = await window.isAlwaysOnTop();
+          setIsPinned(applied);
+          if (profile.pinned && !applied) throw new Error("系统未恢复置顶设置。");
         } catch (error) {
           setError(msg(error));
         } finally {
@@ -108,7 +113,7 @@ function App() {
     };
   }, []);
   useEffect(() => {
-    if (!p?.settings || page === "history") return;
+    if (!p?.settings || page === "history" || page === "goals") return;
     const timer = setInterval(
       () => {
         if (!document.hidden) setNow(new Date());
@@ -130,17 +135,22 @@ function App() {
     }
   }
   async function store(next: Profile) {
-    await invoke("save_profile", { profile: next });
-    setP(next);
+    const saved = await invoke<Profile>("save_profile", { profile: next });
+    setP(saved);
     setNow(new Date());
   }
   const action = (fn: () => Promise<void>) => {
     void run(fn).catch((e) => setError(msg(e)));
   };
+  const onboarding = !p || needsOnboarding(p);
+  const q =
+    p && page === "home" && !onboarding ? profileSnapshot(p, now) : null;
+  const activeGoal = q ? advanceGoal(goalProgress, q, goals) : goalProgress;
+  useEffect(() => {
+    if (activeGoal !== goalProgress) setGoalProgress(activeGoal);
+  }, [activeGoal, goalProgress]);
   if (!p) return <main>{error || "正在读取本地数据…"}</main>;
   const s = p.settings ? rules(p.settings) : null;
-  const onboarding = needsOnboarding(p);
-  const q = page === "home" && !onboarding ? profileSnapshot(p, now) : null;
   const today = dayKey(now);
   const openPause = p.pauses.find(
     (x) => x.dateKey === today && x.endedAt === null,
@@ -182,7 +192,8 @@ function App() {
   const togglePin = () =>
     action(async () => {
       const window = getCurrentWindow();
-      const pinned = !isPinned;
+      const previous = await window.isAlwaysOnTop();
+      const pinned = !previous;
       try {
         await window.setAlwaysOnTop(pinned);
         if ((await window.isAlwaysOnTop()) !== pinned)
@@ -191,9 +202,9 @@ function App() {
         setIsPinned(pinned);
       } catch (error) {
         try {
-          await window.setAlwaysOnTop(isPinned);
+          await window.setAlwaysOnTop(previous);
         } finally {
-          setIsPinned(await window.isAlwaysOnTop().catch(() => isPinned));
+          setIsPinned(await window.isAlwaysOnTop().catch(() => previous));
         }
         throw error;
       }
@@ -240,78 +251,127 @@ function App() {
               })
             }
           />
-        ) : page === "settings" ? (
+        ) : page === "settings" || page === "goals" ? (
           <>
-            <Settings
-              profile={p}
-              initial={p.settings}
-              now={now}
-              busy={busy}
-              reviewOnboarding={() => setPage("wizard")}
-              close={() => {
-                setNow(new Date());
-                setPage("home");
-              }}
-              save={(settings) =>
-                run(async () => {
-                  await store({ ...p, settings });
+            <div hidden={page !== "settings"}>
+              <Settings
+                profile={p}
+                initial={p.settings}
+                now={now}
+                busy={busy}
+                reviewOnboarding={() => setPage("wizard")}
+                manageGoals={() => setPage("goals")}
+                close={() => {
+                  setNow(new Date());
                   setPage("home");
-                })
-              }
-            />
-            <section className="card">
-              <h2>窗口与开机启动</h2>
-              <label className="row">
-                <input
-                  type="checkbox"
-                  disabled={busy}
-                  checked={p.pinned}
-                  onChange={togglePin}
-                />
-                窗口置顶
-              </label>
-              <label className="row">
-                <input
-                  type="checkbox"
-                  disabled={busy || auto === null}
-                  checked={auto ?? false}
-                  onChange={(e) => {
-                    const value = e.target.checked;
-                    action(async () => {
-                      await (value ? enable() : disable());
-                      const actual = await isEnabled();
-                      setAuto(actual);
-                      if (actual !== value)
-                        throw new Error("系统未应用开机启动设置。");
-                    });
-                  }}
-                />
-                开机启动
-              </label>
-              <p>关闭窗口后可从托盘重新打开。</p>
-            </section>
-            <section className="card">
-              <h2>本地数据</h2>
-              <p>收入按排班估算，数据仅存于本机。</p>
-              <button
-                disabled={busy}
-                onClick={() => {
-                  if (
-                    confirm("清空工资、排班、提成及暂停记录？") &&
-                    confirm("此操作不可撤销。确认清空？")
-                  )
-                    action(async () => {
-                      await disable();
-                      await getCurrentWindow().setAlwaysOnTop(false);
-                      await store(empty());
-                      setAuto(false);
-                      setPage("home");
-                    });
                 }}
-              >
-                清空数据
-              </button>
-            </section>
+                save={(settings) =>
+                  run(async () => {
+                    await store({ ...p, settings });
+                    setPage("home");
+                  })
+                }
+              />
+            </div>
+            {page === "goals" ? (
+              <Goals
+                custom={p.customGoals ?? []}
+                builtIn={effectiveBuiltInGoals(p.builtInGoalOverrides)}
+                overrides={p.builtInGoalOverrides}
+                close={() => setPage("settings")}
+                save={(goal) =>
+                  run(async () => {
+                    if (goal.id.startsWith("builtin:")) {
+                      await store({
+                        ...p,
+                        builtInGoalOverrides: {
+                          ...p.builtInGoalOverrides,
+                          [goal.id]: { name: goal.name, priceCents: goal.priceCents },
+                        },
+                      });
+                      return;
+                    }
+                    const custom = p.customGoals ?? [];
+                    const exists = custom.some((g) => g.id === goal.id);
+                    await store({
+                      ...p,
+                      customGoals: exists
+                        ? custom.map((g) => (g.id === goal.id ? goal : g))
+                        : [goal, ...custom],
+                    });
+                    if (!exists) setGoalProgress(null);
+                  })
+                }
+                reset={(id) =>
+                  run(() => {
+                    const builtInGoalOverrides = { ...p.builtInGoalOverrides };
+                    delete builtInGoalOverrides[id];
+                    return store({ ...p, builtInGoalOverrides });
+                  })
+                }
+                remove={(id) =>
+                  run(() =>
+                    store({
+                      ...p,
+                      customGoals: (p.customGoals ?? []).filter(
+                        (g) => g.id !== id,
+                      ),
+                    }),
+                  )
+                }
+              />
+            ) : (
+              <>
+                <section className="card">
+                  <h2>启动与驻留</h2>
+                  <label className="row">
+                    <input
+                      type="checkbox"
+                      disabled={busy || auto === null}
+                      checked={auto ?? false}
+                      onChange={(e) => {
+                        const value = e.target.checked;
+                        action(async () => {
+                          await (value ? enable() : disable());
+                          const actual = await isEnabled();
+                          setAuto(actual);
+                          if (actual !== value)
+                            throw new Error("系统未应用开机启动设置。");
+                        });
+                      }}
+                    />
+                    开机启动
+                  </label>
+                  <p>关闭窗口后可从托盘重新打开。</p>
+                </section>
+                <section className="card">
+                  <h2>本地数据</h2>
+                  <p>收入按排班估算，数据仅存于本机。</p>
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          "清空工资、排班、提成、暂停记录及激励目标设置？",
+                        ) &&
+                        confirm("此操作不可撤销。确认清空？")
+                      )
+                        action(async () => {
+                          await disable();
+                          await getCurrentWindow().setAlwaysOnTop(false);
+                          await store(empty());
+                          setAuto(false);
+                          setIsPinned(false);
+                          setGoalProgress(null);
+                          setPage("home");
+                        });
+                    }}
+                  >
+                    清空数据
+                  </button>
+                </section>
+              </>
+            )}
           </>
         ) : page === "history" ? (
           <div className="history">
@@ -379,7 +439,15 @@ function App() {
             <p className="hourly">
               当前赚钱速度 <strong>{money(q.hourlyRate / 3600, 4)}/秒</strong>
             </p>
-            <p className="motivation">{motivation(now, s, q, false)}</p>
+            <p className="motivation">
+              {motivation(
+                now,
+                s,
+                q,
+                goals.find((goal) => goal.id === activeGoal?.id),
+                activeGoal,
+              )}
+            </p>
             <div className="action">
               {(status === "working" || status === "paused") && (
                 <button
@@ -452,25 +520,20 @@ function App() {
               </div>
               <div className="month-actions">
                 <button onClick={() => setAdding(true)}>＋ 添加提成</button>
-                <div className="attendance-group">
-                  <small className="attendance-amount">
-                    满勤奖 {money(q.attendanceAmount)}
-                  </small>
-                  <button
-                    className="attendance"
-                    aria-label={
-                      q.attendanceOn ? "满勤奖：已满勤" : "满勤奖：无满勤"
-                    }
-                    disabled={busy}
-                    aria-pressed={q.attendanceOn}
-                    onClick={() =>
-                      action(() => store(toggleAttendance(p, new Date())))
-                    }
-                  >
-                    <span aria-hidden="true">{q.attendanceOn ? "●" : "○"}</span>{" "}
-                    {q.attendanceOn ? "已满勤" : "无满勤"}
-                  </button>
-                </div>
+                <button
+                  className="attendance"
+                  aria-label={
+                    q.attendanceOn ? "满勤奖：已满勤" : "满勤奖：无满勤"
+                  }
+                  disabled={busy}
+                  aria-pressed={q.attendanceOn}
+                  onClick={() =>
+                    action(() => store(toggleAttendance(p, new Date())))
+                  }
+                >
+                  <span aria-hidden="true">{q.attendanceOn ? "●" : "○"}</span>{" "}
+                  {q.attendanceOn ? "已满勤" : "无满勤"}
+                </button>
               </div>
             </section>
             <footer className="home-dates">

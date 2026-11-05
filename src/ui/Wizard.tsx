@@ -192,14 +192,14 @@ export function Wizard({
               setError("");
             }}
           >
-            ← 上一步
+            上一步
           </button>
         )}
         <button
           className="primary"
           disabled={busy || (step === 1 && !validSchedule)}
         >
-          {step === 2 ? "开始使用 →" : "继续 →"}
+          {step === 2 ? "开始使用" : "继续"}
         </button>
       </div>
     </form>

@@ -485,10 +485,23 @@ dialog::backdrop {
   }
 }
 
-.settings > .primary {
+.settings-fields {
+  display: grid;
+  gap: var(--s3);
+  min-inline-size: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-actions {
   position: sticky;
   bottom: 0;
   z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s2);
+  background: var(--canvas);
   box-shadow: 0 0 0 5px var(--canvas);
 }
 
@@ -659,9 +672,8 @@ dialog::backdrop {
   align-items: center;
   font-size: 20px;
 }
-.time-slot strong span {
+.time-slot strong svg {
   color: var(--muted);
-  font-size: 15px;
 }
 .derived {
   margin-top: 4px;
@@ -978,14 +990,6 @@ dialog::backdrop {
   box-shadow: inset 0 0 0 1px currentColor;
   background: var(--neutral-pill);
 }
-.attendance-amount {
-  white-space: nowrap;
-}
-.attendance-group {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 .home-dates {
   display: flex;
   justify-content: space-between;
@@ -1010,4 +1014,66 @@ dialog::backdrop {
   .home .month {
     padding: 12px;
   }
+}
+
+.chevron {
+  display: block;
+  flex: none;
+}
+.day-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+}
+.goal-link {
+  width: 100%;
+  text-align: left;
+  min-height: 42px;
+  padding-block: 10px;
+}
+.goal-link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.goals {
+  display: grid;
+  gap: 12px;
+  max-width: 450px;
+  margin-inline: auto;
+}
+.goals-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.goal-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.goal-entry small {
+  white-space: nowrap;
+}
+.goal-entry button {
+  white-space: nowrap;
+}
+.goal-name {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.goal-form {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
 }

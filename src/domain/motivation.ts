@@ -1,49 +1,107 @@
-import bank from "../../data/motivations.json";
+import bank from "../../data/motivations.json" with { type: "json" };
 import { workSegments } from "./earnings.ts";
 import type { getSnapshot, Settings } from "./earnings.ts";
+import { cents } from "./profile.ts";
 
-export function duration(ms: number) {
-  const min = Math.max(0, Math.ceil(ms / 60000));
-  return min > 59
-    ? `${Math.floor(min / 60)} 小时 ${min % 60} 分钟`
-    : `${min} 分钟`;
+export type Goal = { id: string; name: string; priceCents: number };
+export type GoalOverrides = Record<string, Omit<Goal, "id">>;
+export type GoalProgress = { id: string; date: string; startHours: number };
+type Snapshot = ReturnType<typeof getSnapshot>;
+
+export const builtInGoals: readonly Goal[] = bank.targets.map((g) => ({
+  id: `builtin:${g.id}`,
+  name: g.name,
+  priceCents: Math.round(g.priceCny * 100),
+}));
+
+export function makeGoal(id: string, name: string, price: string): Goal {
+  name = name.trim();
+  const length = Array.from(name).length;
+  if (length < 2 || length > 24 || /[\u0000-\u001f\u007f]/.test(name)) {
+    throw new Error("目标名称须为 2–24 个字符。");
+  }
+  const priceCents = cents(price.trim());
+  if (priceCents > 99_999_999)
+    throw new Error("价格须在 ¥0.01–¥999,999.99 之间。");
+  return {
+    id: id.startsWith("custom:") || id.startsWith("builtin:")
+      ? id
+      : `custom:${id}`,
+    name,
+    priceCents,
+  };
+}
+
+export function effectiveBuiltInGoals(overrides: GoalOverrides = {}): Goal[] {
+  return builtInGoals.map((goal) => ({ ...goal, ...overrides[goal.id] }));
+}
+
+export function goalPool(custom: readonly Goal[], overrides?: GoalOverrides): Goal[] {
+  const builtIn = effectiveBuiltInGoals(overrides);
+  return Array.from(
+    { length: Math.max(custom.length, builtIn.length) },
+    (_, i) => [custom[i], builtIn[i]].filter(Boolean),
+  ).flat();
+}
+
+const remainingHours = (q: Snapshot, g: Goal, progress: GoalProgress) =>
+  g.priceCents / 100 / q.hourlyRate -
+  Math.max(0, q.todayWorkedHours - progress.startHours);
+
+export function advanceGoal(
+  previous: GoalProgress | null,
+  q: Snapshot,
+  goals: readonly Goal[],
+): GoalProgress | null {
+  if (q.status !== "working") return previous;
+  if (!goals.length || !Number.isFinite(q.hourlyRate) || q.hourlyRate <= 0)
+    return null;
+  const index = previous ? goals.findIndex((g) => g.id === previous.id) : -1;
+  if (
+    previous &&
+    previous.date === q.dateKey &&
+    index >= 0 &&
+    previous.startHours <= q.todayWorkedHours
+  ) {
+    if (remainingHours(q, goals[index], previous) > 1e-9 || goals.length === 1)
+      return previous;
+  }
+  const next = goals[(index + 1) % goals.length];
+  return { id: next.id, date: q.dateKey, startHours: q.todayWorkedHours };
+}
+
+function duration(hours: number) {
+  const minutes = Math.max(1, Math.ceil(hours * 60 - 1e-7));
+  if (minutes < 60) return `${minutes} 分钟`;
+  return `${Math.floor(minutes / 60)} 小时${minutes % 60 ? ` ${minutes % 60} 分` : ""}`;
 }
 
 export function motivation(
   now: Date,
   s: Settings,
-  q: ReturnType<typeof getSnapshot>,
-  leave: boolean,
+  q: Snapshot,
+  goal?: Goal,
+  progress?: GoalProgress | null,
 ) {
-  const slot = Math.floor(now.getTime() / 1_200_000);
-  if (q.status !== "working") {
-    const list = bank.stateTemplates[leave ? "unpaid_leave" : q.status];
-    return list[slot % list.length].text;
+  if (q.status !== "working") return bank.stateTemplates[q.status][0].text;
+  if (
+    !goal ||
+    !progress ||
+    progress.date !== q.dateKey ||
+    !Number.isFinite(q.hourlyRate) ||
+    q.hourlyRate <= 0
+  ) {
+    return "今天的工作进度已经记下。";
   }
-  const t = now.getTime();
-  const ranges = workSegments(now, s)
-    .map(([a, b]) => [Math.max(a, t), b])
-    .filter(([a, b]) => a < b);
-  const left = ranges.reduce((n, [a, b]) => n + b - a, 0);
-  const attainable = bank.targets.filter(
-    (g) =>
-      g.priceCny > q.todayEarned &&
-      g.priceCny <=
-        Math.min(q.dailyBase, q.todayEarned + (left * q.hourlyRate) / 3600000),
+  const needed = remainingHours(q, goal, progress);
+  if (needed <= 1e-9) return `${goal.name}已经赚回来了。`;
+  const hoursLeft = workSegments(now, s).reduce(
+    (hours, [start, end]) =>
+      hours + Math.max(0, end - Math.max(start, now.getTime())) / 3_600_000,
+    0,
   );
-  if (attainable.length) {
-    const g = attainable[slot % Math.min(attainable.length, 3)];
-    let needed = ((g.priceCny - q.todayEarned) * 3600000) / q.hourlyRate;
-    for (const [a, b] of ranges) {
-      if (needed <= b - a)
-        return bank.workingTemplates[[0, 3, 5, 9][slot % 4]].text
-          .replace("{time}", duration(a + needed - t))
-          .replace("{target}", g.name);
-      needed -= b - a;
-    }
-  }
-  const reached = bank.targets.findLast((g) => g.priceCny <= q.todayEarned);
-  return reached
-    ? bank.completedTemplates[slot % 5].text.replace("{target}", reached.name)
-    : "今天的工作进度已经记下。";
+  if (needed <= hoursLeft + 1e-9)
+    return `再过 ${duration(needed)}，${goal.name}就赚回来了。`;
+  const workdays = Math.ceil((needed / q.scheduledHours) * 10) / 10;
+  return `还需要约 ${workdays.toLocaleString("zh-CN")} 个工作日，${goal.name}就赚回来了。`;
 }

@@ -1,29 +1,37 @@
+import { Chevron } from "./Chevron";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 
 const ROW = 42;
 const two = (value: number) => String(value).padStart(2, "0");
 
+// Scroll events may arrive after the user confirms. The wheel position is current.
+function wheelValue(wheel: HTMLDivElement | null, value: number, last: number, first = 0) {
+  if (!wheel) return value;
+  return Math.max(first, Math.min(last, first + Math.round(wheel.scrollTop / ROW)));
+}
+
 function Wheel({
   label,
   value,
+  wheel,
   first = 0,
   last,
   change,
 }: {
   label: string;
   value: number;
+  wheel: RefObject<HTMLDivElement | null>;
   first?: number;
   last: number;
   change: (value: number) => void;
 }) {
-  const wheel = useRef<HTMLDivElement>(null);
   const initial = useRef(value);
   const clamp = (n: number) => Math.max(first, Math.min(last, n));
   useEffect(() => {
     const el = wheel.current;
     if (el) el.scrollTop = (initial.current - first) * ROW;
-  }, [first]);
+  }, [first, wheel]);
 
   function select(value: number) {
     const next = clamp(value);
@@ -44,12 +52,13 @@ function Wheel({
           aria-valuenow={value}
           tabIndex={0}
           onScroll={(e) =>
-            change(clamp(first + Math.round(e.currentTarget.scrollTop / ROW)))
+            change(wheelValue(e.currentTarget, value, last, first))
           }
           onKeyDown={(e) => {
+            const current = wheelValue(e.currentTarget, value, last, first);
             const next = {
-              ArrowUp: value - 1,
-              ArrowDown: value + 1,
+              ArrowUp: current - 1,
+              ArrowDown: current + 1,
               Home: first,
               End: last,
             }[e.key];
@@ -147,6 +156,8 @@ export function TimePicker({
   change: (value: string) => void;
 }) {
   const [draft, setDraft] = useState<[number, number] | null>(null);
+  const hours = useRef<HTMLDivElement>(null);
+  const minutes = useRef<HTMLDivElement>(null);
   const close = () => setDraft(null);
   return (
     <>
@@ -163,7 +174,7 @@ export function TimePicker({
         <small>{label}</small>
         <strong>
           {value}
-          <span aria-hidden="true">⌄</span>
+          <Chevron />
         </strong>
       </button>
       {draft && (
@@ -172,12 +183,15 @@ export function TimePicker({
           hint="滚动选择小时与分钟"
           close={close}
           confirm={() => {
-            change(`${two(draft[0])}:${two(draft[1])}`);
+            const hour = wheelValue(hours.current, draft[0], 23);
+            const minute = wheelValue(minutes.current, draft[1], 59);
+            change(`${two(hour)}:${two(minute)}`);
             close();
           }}
         >
           <Wheel
             label="时"
+            wheel={hours}
             value={draft[0]}
             last={23}
             change={(hour) =>
@@ -186,6 +200,7 @@ export function TimePicker({
           />
           <Wheel
             label="分"
+            wheel={minutes}
             value={draft[1]}
             last={59}
             change={(minute) =>
@@ -208,6 +223,7 @@ export function DayOfMonthPicker({
   children?: ReactNode;
 }) {
   const [draft, setDraft] = useState<number | null>(null);
+  const day = useRef<HTMLDivElement>(null);
   const close = () => setDraft(null);
   return (
     <>
@@ -218,7 +234,7 @@ export function DayOfMonthPicker({
         aria-label={`每个月 ${value} 日`}
         onClick={() => setDraft(value)}
       >
-        {children ?? `${value} 日`} <span aria-hidden="true">⌄</span>
+        {children ?? `${value} 日`} <Chevron />
       </button>
       {draft !== null && (
         <PickerDialog
@@ -226,12 +242,13 @@ export function DayOfMonthPicker({
           hint="选择每月的固定发薪日"
           close={close}
           confirm={() => {
-            change(draft);
+            change(wheelValue(day.current, draft, 31, 1));
             close();
           }}
         >
           <Wheel
             label="日"
+            wheel={day}
             first={1}
             last={31}
             value={draft}
