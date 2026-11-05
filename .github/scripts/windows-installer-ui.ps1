@@ -15,6 +15,8 @@ public static class InstallerWindow {
   [StructLayout(LayoutKind.Sequential)] public struct Rect { public int L, T, R, B; }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out Rect r);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint message, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint message, IntPtr w, IntPtr l);
 }
 '@
 $u = [System.Windows.Automation.AutomationElement]
@@ -71,8 +73,15 @@ function Find-Control($window, [string]$name) {
   return $control
 }
 function Invoke-Control($control) {
-  $pattern = $control.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
-  $pattern.Invoke()
+  $pattern = $null
+  if ($control.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) {
+    $pattern.Invoke()
+    return
+  }
+  $handle = [IntPtr]$control.Current.NativeWindowHandle
+  if ($handle -eq [IntPtr]::Zero -or ![InstallerWindow]::PostMessage($handle, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+    throw "Cannot invoke NSIS control: $($control.Current.Name)"
+  }
 }
 function Start-Uninstaller {
   # _?= runs the actual uninstaller in-place so its HWND belongs to the tracked process.
@@ -103,23 +112,18 @@ try {
   $setup = Get-Window $script:ActiveProcess
   Capture $setup '01-install-upgrade-welcome'
   if ($setup.Current.Name -notmatch '安装') { throw "Setup title is not Chinese: $($setup.Current.Name)" }
-  Invoke-Control (Find-Control $setup '取消')
-  if (!$script:ActiveProcess.WaitForExit(2000)) {
-    $confirm = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst(
-      [System.Windows.Automation.TreeScope]::Children,
-      (New-Object System.Windows.Automation.PropertyCondition($u::ProcessIdProperty, $script:ActiveProcess.Id)))
-    $exit = Find-Named $confirm '是(Y)'
-    if (!$exit) { $exit = Find-Named $confirm '是' }
-    if ($exit) { Invoke-Control $exit }
-  }
-  if (!$script:ActiveProcess.WaitForExit(2000)) { Stop-Process -Id $script:ActiveProcess.Id }
+  # Capture the welcome page without starting installation or relying on the shell's exit dialog.
+  Stop-Process -Id $script:ActiveProcess.Id
+  if (!$script:ActiveProcess.WaitForExit(5000)) { throw 'Setup welcome window did not close.' }
   $script:ActiveProcess = $null
 
   $window = Start-Uninstaller
   if ($window.Current.Name -ne '卸载上班鼓励器') { throw "Unexpected uninstall title: $($window.Current.Name)" }
   $box = Find-Control $window '同时删除应用数据'
-  $toggle = $box.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
-  if ($toggle.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Data deletion was preselected.' }
+  $handle = [IntPtr]$box.Current.NativeWindowHandle
+  if ($handle -eq [IntPtr]::Zero) { throw 'Could not resolve the native data deletion checkbox.' }
+  $state = [InstallerWindow]::SendMessage($handle, 0x00F0, [IntPtr]::Zero, [IntPtr]::Zero)
+  if ($state -ne [IntPtr]::Zero) { throw 'Data deletion was preselected.' }
   $null = Find-Control $window '卸载位置：'
   Capture $window '02-uninstall-confirm'
   Invoke-Control (Find-Control $window '取消')
@@ -128,7 +132,9 @@ try {
 
   $window = Start-Uninstaller
   $box = Find-Control $window '同时删除应用数据'
-  $box.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+  $handle = [IntPtr]$box.Current.NativeWindowHandle
+  $null = [InstallerWindow]::SendMessage($handle, 0x00F1, [IntPtr]1, [IntPtr]::Zero)
+  if ([InstallerWindow]::SendMessage($handle, 0x00F0, [IntPtr]::Zero, [IntPtr]::Zero) -ne [IntPtr]1) { throw 'Could not select the test checkbox.' }
   Capture $window '03-uninstall-opt-in'
   Invoke-Control (Find-Control $window '卸载')
   $desktop = $u::RootElement
