@@ -123,6 +123,12 @@ jobs:
           # Prepare a disposable installed copy for the interactive evidence step.
           $p = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "UI fixture installation failed" }
+      - name: Test installed Windows app and process restart
+        if: matrix.name == 'windows-x64'
+        shell: pwsh
+        run: |
+          $app = Join-Path $env:RUNNER_TEMP 'ShangBan-Smoke/shang-ban-gu-li-qi.exe'
+          node tests/windows-installed-app.mjs "$app" "windows-ui"
       - name: Capture Windows NSIS UI evidence
         if: matrix.name == 'windows-x64'
         continue-on-error: true
