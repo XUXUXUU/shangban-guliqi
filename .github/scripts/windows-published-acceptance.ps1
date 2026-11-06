@@ -42,6 +42,14 @@ function Start-App {
   if($script:app.MainWindowHandle -ne 0) {break}
  }
  if($script:app.MainWindowHandle -eq 0) {throw 'No native app window'}
+ for($i=0;$i -lt 120;$i++) {
+  $script:app.Refresh()
+  if($script:app.HasExited){throw 'App exited before database initialization'}
+  $ready=& node tests/published-profile.mjs "$db" ready
+  if($ready -eq 'ready'){break}
+  Start-Sleep -Milliseconds 500
+ }
+ if($ready -ne 'ready'){throw 'The installed EXE did not initialize its database within 60 seconds'}
  $script:root=$u::FromHandle($script:app.MainWindowHandle)
  $null=[NativeQA]::SetForegroundWindow($script:app.MainWindowHandle)
 }

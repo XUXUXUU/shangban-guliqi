@@ -4,6 +4,13 @@ on:
   push:
     tags: ['v*']
   pull_request:
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'data/**'
+      - 'reference/**'
+      - 'package*.json'
+      - 'tests/settings-and-goals.mjs'
   workflow_dispatch:
 
 permissions:
@@ -178,4 +185,3 @@ jobs:
               --notes "含 Windows x64 NSIS 与 macOS Apple Silicon 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包是未签名测试版，SmartScreen 可能提示未知发布者。下载后可核对 SHA-256；公开前须完成双端实机验收。" \
               "${assets[@]}" SHA256SUMS.txt windows-verification.json
           fi
-

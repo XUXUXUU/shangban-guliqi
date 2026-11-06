@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 const [path, action, value] = process.argv.slice(2);
 assert.ok(process.env.GITHUB_ACTIONS === "true", "Disposable runner required");
+if (action === "ready") {
+  try {
+    const probe = new DatabaseSync(path, { readOnly: true });
+    const ok = probe.prepare("SELECT name FROM sqlite_master WHERE name='profile'").get();
+    probe.close();
+    console.log(ok ? "ready" : "waiting");
+  } catch { console.log("waiting"); }
+  process.exit(0);
+}
 const db = new DatabaseSync(path);
 try {
   db.exec("PRAGMA busy_timeout=5000");

@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install the public Windows EXE
-        shell: pwsh
+        shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -62,11 +62,15 @@ jobs:
           codesign --verify --strict "$app"
           file "$app/Contents/MacOS/shang-ban-gu-li-qi" | tee mac-evidence/architecture.txt
           open "$app"
-          for i in {1..40}; do
-            if test -f "$HOME/Library/Application Support/com.shangbanguliqi.desktop/earnings.sqlite3"; then break; fi
-            sleep 0.2
+          app_db="$HOME/Library/Application Support/com.shangbanguliqi.desktop/earnings.sqlite3"
+          for i in {1..120}; do
+            if test -f "$app_db" && test "$(sqlite3 -readonly "$app_db" "SELECT count(*) FROM sqlite_master WHERE name='profile';")" = 1; then break; fi
+            sleep 0.5
           done
-          sqlite3 "$HOME/Library/Application Support/com.shangbanguliqi.desktop/earnings.sqlite3" 'PRAGMA integrity_check;' | tee mac-evidence/sqlite.txt
+          pgrep -f "$app/Contents/MacOS/shang-ban-gu-li-qi" > mac-evidence/process.txt
+          test -f "$app_db"
+          test "$(sqlite3 -readonly "$app_db" "SELECT count(*) FROM sqlite_master WHERE name='profile';")" = 1
+          sqlite3 -readonly "$app_db" 'PRAGMA integrity_check; PRAGMA user_version;' | tee mac-evidence/sqlite.txt
           screencapture -x mac-evidence/native-desktop.png || true
       - uses: actions/upload-artifact@v4
         if: always()
