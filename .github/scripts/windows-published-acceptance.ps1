@@ -54,6 +54,7 @@ function Start-App {
  if($ready -ne 'ready'){throw 'The installed EXE did not initialize its database within 60 seconds'}
  $script:root=$u::FromHandle($script:app.MainWindowHandle)
  $null=[NativeQA]::SetForegroundWindow($script:app.MainWindowHandle)
+ $null=Find-UI '^设置$|^每月税后工资（元）$'
 }
 function Stop-App {
  if($script:app -and !$script:app.HasExited) {
@@ -127,6 +128,7 @@ function Case([string]$name,[scriptblock]$run) {
  $results | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 (Join-Path $evidence 'results.json')
 }
 function Home-Values {
+ $null=Find-UI '^本月累计$'
  $all=$script:root.FindAll($scope,[System.Windows.Automation.Condition]::TrueCondition)
  $texts=@($all|Where-Object {$_.Current.ControlType.ProgrammaticName -eq 'ControlType.Text'}|ForEach-Object {$_.Current.Name.Trim()}|Where-Object {$_})
  $i=[array]::IndexOf($texts,'今日已赚')
