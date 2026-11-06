@@ -16,6 +16,8 @@ public static class NativeQA {
  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h,int index);
  [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint x,uint y,uint data,UIntPtr extra);
 }
 '@
 $evidence=(New-Item -ItemType Directory -Force $EvidenceDir).FullName
@@ -76,7 +78,14 @@ function Open-UI([string]$pattern,[string]$kind='Button') {
  $pat=$null
  if($node.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern,[ref]$pat)) {$pat.Invoke()}
  elseif($node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern,[ref]$pat)) {$pat.Expand()}
- else {$node.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern).DoDefaultAction()}
+ elseif($node.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern,[ref]$pat)) {$pat.Toggle()}
+ else {
+  $box=$node.Current.BoundingRectangle
+  if($box.Width -le 0 -or $box.Height -le 0){throw 'Native control has no clickable bounds'}
+  $null=[NativeQA]::SetCursorPos([int]($box.X+$box.Width/2),[int]($box.Y+$box.Height/2))
+  [NativeQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+  [NativeQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+ }
  Start-Sleep -Milliseconds 120
 }
 function Input-UI([string]$name,[string]$value) {
@@ -110,11 +119,36 @@ function Case([string]$name,[scriptblock]$run) {
   & $run
   $results.Add(@{item=$name;status='通过'})
  }catch{
-  $results.Add(@{item=$name;status='未通过';error=$_.Exception.Message})
+  $status=if($_.Exception.Message.StartsWith('UNTESTED:')){'未实测'}else{'未通过'}
+  $results.Add(@{item=$name;status=$status;error=$_.Exception.Message})
   try{Capture ("failure-"+($results.Count))}catch{}
   $_ | Out-String | Write-Output
  }
  $results | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 (Join-Path $evidence 'results.json')
+}
+function Home-Values {
+ $all=$script:root.FindAll($scope,[System.Windows.Automation.Condition]::TrueCondition)
+ $texts=@($all|Where-Object {$_.Current.ControlType.ProgrammaticName -eq 'ControlType.Text'}|ForEach-Object {$_.Current.Name.Trim()}|Where-Object {$_})
+ $i=[array]::IndexOf($texts,'今日已赚')
+ $j=[array]::IndexOf($texts,'当前赚钱速度')
+ $k=[array]::IndexOf($texts,'本月累计')
+ if($i -lt 0 -or $j -lt 0 -or $k -lt 0){throw 'Cannot read native home income fields'}
+ return @{today=[double](($texts[$i+1]-replace '[¥,]','')+'.'+$texts[$i+2]);rate=[double]($texts[$j+1]-replace '[¥,]','');month=[double]($texts[$k+1]-replace '[¥,]','')}
+}
+function Tray-Menu([string]$action) {
+ $nodes=$u::RootElement.FindAll($scope,[System.Windows.Automation.Condition]::TrueCondition)
+ $icon=@($nodes|Where-Object {$_.Current.ControlType.ProgrammaticName -eq 'ControlType.Button' -and $_.Current.Name -match '上班鼓励器'})|Select-Object -First 1
+ if(!$icon){throw 'UNTESTED: The runner did not expose the application tray icon'}
+ $r=$icon.Current.BoundingRectangle
+ $null=[NativeQA]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))
+ [NativeQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero)
+ [NativeQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
+ Start-Sleep -Milliseconds 250
+ $condition=New-Object System.Windows.Automation.PropertyCondition($u::NameProperty,$action)
+ $menu=$u::RootElement.FindFirst($scope,$condition)
+ if(!$menu){throw "UNTESTED: Tray menu did not expose $action"}
+ $menu.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+ Start-Sleep -Milliseconds 250
 }
 function Save-Panel {Open-UI '^保存修改$';$null=Find-UI '^设置$' 'Text'}
 function Open-Income {Open-UI '^工资与发薪'}
@@ -146,6 +180,7 @@ try {
  Stop-App
  Profile 'base'
  Start-App
+ $homeBefore=Home-Values
  Case '五个设置入口与二级页' {
   Open-UI '^设置$'
   foreach($name in @('工资与发薪','作息安排','激励目标','启动与驻留','数据与工具')) {$null=Find-UI ("^"+$name) 'Button'}
@@ -169,6 +204,11 @@ try {
   if($saved.settings.salaryCents -ne 600000 -or $saved.settings.attendanceCents -ne 50000 -or $saved.settings.payday -ne 12){throw 'SQLite does not match income fields'}
   Open-Income;Input-UI '税后月薪（元）' '7000';Open-UI '^取消$'
   if((Profile 'read').settings.salaryCents -ne 600000){throw 'Cancel wrote salary'}
+  Open-UI '^返回$'
+  $homeAfter=Home-Values
+  if($homeAfter.rate -le $homeBefore.rate -or $homeAfter.today -le $homeBefore.today -or $homeAfter.month -le $homeBefore.month){throw 'Native home income did not recalculate after salary save'}
+  Capture '05b-home-recalculated'
+  Open-UI '^设置$'
  }
  Case '保存失败留在二级页' {
   Open-Income;Input-UI '税后月薪（元）' '6500'
@@ -209,6 +249,10 @@ try {
   Capture '09-removed-goal'
   Open-UI '^恢复$'
   if((Profile 'read').hiddenBuiltInGoalIds -contains 'builtin:tsingtao_green_bottle'){throw 'Built-in restore was not saved'}
+  Open-UI '^编辑 QA Edited$'
+  $price=Find-UI '^价格（元）$' 'Edit'
+  if($price.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne '9.99'){throw 'Restored goal lost its edited price'}
+  Open-UI '^取消$'
   Open-UI '^返回$';Open-UI '^返回$'
  }
  Case '退出重启与覆盖安装保留设置' {
@@ -217,6 +261,10 @@ try {
   $p=Start-Process $installer -ArgumentList '/S',"/D=$install" -Wait -PassThru
   if($p.ExitCode -ne 0){throw 'Reinstall failed'}
   Start-App;Open-UI '^设置$';Open-Income
+  foreach($pair in @(@('税后月薪（元）','6000'),@('满勤奖金（元）','500'))){
+   $control=Find-UI ('^'+[regex]::Escape($pair[0])+'$') 'Edit'
+   if($control.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne $pair[1]){throw 'Restarted input does not match saved SQLite'}
+  }
   Capture '10-restarted-income'
   $after=Profile 'read' | ConvertTo-Json -Depth 12 -Compress
   if($before -ne $after){throw 'Profile changed across restart and reinstall'}
@@ -236,6 +284,14 @@ try {
   Start-Sleep -Seconds 1
   if(![NativeQA]::IsWindowVisible($script:app.MainWindowHandle)){throw 'Single-instance relaunch did not restore the window'}
   Capture '11-window-restored'
+ }
+ Case '托盘恢复与真正退出' {
+  Open-UI '^关闭窗口$'
+  Tray-Menu '打开主界面'
+  if(![NativeQA]::IsWindowVisible($script:app.MainWindowHandle)){throw 'Tray did not restore the window'}
+  Capture '11b-tray-restored'
+  Tray-Menu '退出上班鼓励器'
+  if(!$script:app.WaitForExit(5000)){throw 'Tray quit did not terminate the process'}
  }
  Stop-App
  Case '旧目标升级兼容' {
@@ -261,6 +317,17 @@ try {
    }
    Stop-App
   }
+ }
+ Case '动态跨越千元边界' {
+  Profile 'amount' '999.9999'
+  Start-App
+  Capture 'dynamic-before'
+  Open-UI '^继续计时$'
+  Start-Sleep -Milliseconds 500
+  Capture 'dynamic-after'
+  $values=Home-Values
+  if($values.today -le 1000){throw 'Live amount did not advance across 1000'}
+  Stop-App
  }
  Profile 'check'
 }finally{

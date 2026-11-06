@@ -27,6 +27,15 @@ jobs:
           New-Item -ItemType Directory native-evidence | Out-Null
           Get-AuthenticodeSignature $installer | Select-Object Status,StatusMessage,SignerCertificate | ConvertTo-Json | Set-Content -Encoding UTF8 native-evidence/signature.json
           & ./.github/scripts/windows-published-acceptance.ps1 -Installer $installer -EvidenceDir native-evidence
+      - name: Verify public installer and uninstaller Chinese UI
+        if: always()
+        shell: powershell
+        run: |
+          $installer = (Get-ChildItem public-assets/*.exe).FullName
+          $data = Join-Path $env:LOCALAPPDATA 'com.shangbanguliqi.desktop'
+          New-Item -ItemType Directory -Force $data | Out-Null
+          Set-Content (Join-Path $data 'installer-ci-fixture.txt') 'synthetic fixture'
+          ./.github/scripts/windows-installer-ui.ps1 -Installer $installer -InstallDir "$env:RUNNER_TEMP/ShangBan-Published" -EvidenceDir native-evidence
       - uses: actions/upload-artifact@v4
         if: always()
         with:
