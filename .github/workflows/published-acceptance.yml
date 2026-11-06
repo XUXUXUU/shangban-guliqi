@@ -1,0 +1,76 @@
+name: Verify published desktop installers
+on:
+  push:
+    branches: ['verify/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-native:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install the public Windows EXE
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tzutil /s "China Standard Time"
+          gh release download v1.8.0 --repo ${{ github.repository }} --pattern '*windows-x64-setup.exe' --dir public-assets
+          $installer = (Get-ChildItem public-assets/*.exe).FullName
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '0ea19916714c300e597f846907a68443082b120114fcf8efb748c0681b6e76f8') { throw 'Public EXE hash mismatch' }
+          New-Item -ItemType Directory native-evidence | Out-Null
+          Get-AuthenticodeSignature $installer | Select-Object Status,StatusMessage,SignerCertificate | ConvertTo-Json | Set-Content -Encoding UTF8 native-evidence/signature.json
+          & ./.github/scripts/windows-published-acceptance.ps1 -Installer $installer -EvidenceDir native-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-windows-native
+          path: native-evidence/*
+          if-no-files-found: error
+  mac-arm64:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm run check && npm run lint && npm test && npm run build
+      - run: npx playwright install webkit
+      - run: npm run test:ui
+        env:
+          SHANGBAN_BROWSER: webkit
+      - name: Verify the public Apple Silicon DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p public-assets mac-evidence
+          gh release download v1.8.0 --repo "${{ github.repository }}" --pattern '*macos-arm64.dmg' --dir public-assets
+          echo '86cdabf6cb4850d29b62e9a1c59cdd5c5b78fc2861cff3fa67e1e38fbd007560  public-assets/ShangBan-v1.8.0-macos-arm64.dmg' | shasum -a 256 -c -
+          hdiutil verify public-assets/*.dmg > mac-evidence/dmg-verification.txt
+          mkdir -p "$RUNNER_TEMP/published-mac"
+          hdiutil attach -readonly -nobrowse -mountpoint "$RUNNER_TEMP/published-mac" public-assets/*.dmg
+          app="$RUNNER_TEMP/published-mac/上班鼓励器.app"
+          codesign --verify --strict "$app"
+          file "$app/Contents/MacOS/shang-ban-gu-li-qi" | tee mac-evidence/architecture.txt
+          open "$app"
+          for i in {1..40}; do
+            if test -f "$HOME/Library/Application Support/com.shangbanguliqi.desktop/earnings.sqlite3"; then break; fi
+            sleep 0.2
+          done
+          sqlite3 "$HOME/Library/Application Support/com.shangbanguliqi.desktop/earnings.sqlite3" 'PRAGMA integrity_check;' | tee mac-evidence/sqlite.txt
+          screencapture -x mac-evidence/native-desktop.png || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-mac-arm64
+          path: mac-evidence/*
+          if-no-files-found: error
