@@ -12,7 +12,6 @@
 | --- | --- |
 | Windows x64 | `windows-x64-setup.exe` |
 | macOS Apple Silicon | `macos-arm64.dmg` |
-| macOS Intel | `macos-x64.dmg` |
 
 没有 Authenticode 发布者签名的 Windows 安装包属于未签名测试版，可能出现 SmartScreen 提示。SHA-256 用于核对文件是否一致，不能证明软件安全。macOS 使用临时签名，未做 Apple 公证，Gatekeeper 可能提示无法验证开发者。请核对来源和 Release 提供的 SHA-256。
 
@@ -31,9 +30,9 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml
 npm run tauri dev
 ```
 
-在 Windows x64 执行 `npm run tauri build -- --target x86_64-pc-windows-msvc --bundles nsis`。在 macOS 将 `--target` 设为 `aarch64-apple-darwin` 或 `x86_64-apple-darwin`，并使用 `--bundles dmg`。交叉构建前用 `rustup target add` 安装对应目标。
+在 Windows x64 执行 `npm run tauri build -- --target x86_64-pc-windows-msvc --bundles nsis`。在 macOS 将 `--target` 设为 `aarch64-apple-darwin` ，并使用 `--bundles dmg`。交叉构建前用 `rustup target add` 安装对应目标。
 
-推送与应用版本一致的 `vX.Y.Z` 标签，Actions 在所有构建通过后生成 Draft Release。下载并核验三份安装包、完成实机验收后，再从 GitHub 发布草稿。
+推送与应用版本一致的 `vX.Y.Z` 标签，Actions 在所有构建通过后生成 Draft Release。下载并核验两份安装包、完成实机验收后，再从 GitHub 发布草稿。
 
 ## 数据与许可
 

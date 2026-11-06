@@ -2,9 +2,15 @@ name: Build desktop installers
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'data/**'
+      - 'reference/**'
+      - 'package*.json'
+      - 'tests/settings-and-goals.mjs'
   workflow_dispatch:
 
 permissions:
@@ -28,12 +34,6 @@ jobs:
             suffix: .dmg
             name: macos-arm64
             native_test: true
-          - runner: macos-latest
-            target: x86_64-apple-darwin
-            bundle: dmg
-            suffix: .dmg
-            name: macos-x64
-            native_test: false
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           cd release-assets
-          assets=("ShangBan-$TAG-windows-x64-setup.exe" "ShangBan-$TAG-macos-arm64.dmg" "ShangBan-$TAG-macos-x64.dmg")
+          assets=("ShangBan-$TAG-windows-x64-setup.exe" "ShangBan-$TAG-macos-arm64.dmg")
           for asset in "${assets[@]}"; do test -s "$asset"; done
           sha256sum "${assets[@]}" > SHA256SUMS.txt
           if gh release view "$TAG" --json isDraft --jq .isDraft > ../draft-status; then
@@ -182,43 +182,6 @@ jobs:
             gh release upload "$TAG" "${assets[@]}" SHA256SUMS.txt windows-verification.json --clobber
           else
             gh release create "$TAG" --verify-tag --draft --title "上班鼓励器 $TAG" \
-              --notes "含 Windows x64 NSIS 与 macOS Apple Silicon／Intel 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包是未签名测试版，SmartScreen 可能提示未知发布者。下载后可核对 SHA-256；公开前须完成双端实机验收。" \
+              --notes "含 Windows x64 NSIS 与 macOS Apple Silicon 安装包。macOS 使用临时签名，未做 Apple 公证。Windows 安装包是未签名测试版，SmartScreen 可能提示未知发布者。下载后可核对 SHA-256；公开前须完成双端实机验收。" \
               "${assets[@]}" SHA256SUMS.txt windows-verification.json
           fi
-
-  publish:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: installer-*
-          merge-multiple: true
-          path: release-assets
-      - name: Publish verified installers once all builds pass
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v${VERSION}"
-          cd release-assets
-          assets=("ShangBan-${TAG}-windows-x64-setup.exe" "ShangBan-${TAG}-macos-arm64.dmg" "ShangBan-${TAG}-macos-x64.dmg")
-          for asset in "${assets[@]}"; do test -s "$asset"; done
-          test -s windows-verification.json
-          sha256sum "${assets[@]}" > SHA256SUMS.txt
-          if gh api "repos/${GH_REPO}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists; refusing overwrite" >&2
-            exit 1
-          fi
-          gh api "repos/${GH_REPO}/git/refs" -f "ref=refs/tags/${TAG}" -f "sha=${COMMIT_SHA}" >/dev/null
-          gh release create "${TAG}" --verify-tag --target "${COMMIT_SHA}" --latest \
-            --title "上班鼓励器 ${TAG}" \
-            --notes "V1.8：修复 Mac/Windows 今日收入小数位裁切；内置目标更新为 30 项（酒类 7 项）；编辑旁增加 SVG 删除按钮及可恢复隐藏；设置改为带图标的分类和二级页面。CI 通过双端构建、自动化测试与安装器检查后发布。Windows 安装包未签名，SmartScreen 仍可能提示未知发布者；macOS 未经 Apple 公证，可能需要系统安全授权。" \
-            "${assets[@]}" SHA256SUMS.txt windows-verification.json
